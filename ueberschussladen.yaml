@@ -98,7 +98,7 @@ action:
             target:
               entity_id: !input wallbox_current
             data:
-              value: "{{ 16 if !input max_current == '16' else 25 }}"
+              value: "{{ 16 if is_number(!input max_current) and !input max_current | int == 16 else 25 }}"
           - delay: "00:00:30"
 
   - service: number.set_value
@@ -111,7 +111,7 @@ action:
         {% set wallbox_power = states(!input wallbox_power) | float(0) %}
         {% set actual_house_consumption = house_consumption - wallbox_power %}
         {% set surplus_power = pv_power - actual_house_consumption %}
-        {% set max_current = 16 if int(!input max_current) == 16 else 25 %}
+        {% set max_current = 16 if is_number(!input max_current) and !input max_current | int == 16 else 25 %}
         {% set min_current = 1 %}
         {% set conversion_factor = 219 %}
         {% set current = (surplus_power / conversion_factor) | int %}
@@ -133,6 +133,6 @@ action:
             target:
               entity_id: !input wallbox_current
             data:
-              value: "{{ 16 if int(!input max_current) == 16 else 25 }}"
+              value: "{{ 16 if is_number(!input max_current) and !input max_current | int == 16 else 25 }}"
 
 mode: single

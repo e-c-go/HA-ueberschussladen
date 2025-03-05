@@ -1,0 +1,140 @@
+blueprint:
+  name: Überschussladen für Elektroauto
+  description: Überschussladung basierend auf PV-Leistung, Hausverbrauch und Batteriespeicher
+  homeassistant:
+    min_version: "2023.12.0"
+  input:
+    switch:
+      name: Automatisierungsschalter
+      selector:
+        entity:
+          domain: input_boolean
+    battery_soc:
+      name: Batterieladestand
+      selector:
+        entity:
+          domain: sensor
+    min_battery_soc:
+      name: Mindestbatterieladestand (%)
+      description: Mindestbatterieladestand in Prozent, bevor das Laden beginnt
+      default: 50
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+          step: 1
+    pv_power:
+      name: PV-Leistung
+      selector:
+        entity:
+          domain: sensor
+    house_consumption:
+      name: Hausverbrauch
+      selector:
+        entity:
+          domain: sensor
+    wallbox_current:
+      name: Wallbox Stromstärke
+      selector:
+        entity:
+          domain: number
+    wallbox_power:
+      name: Wallbox Ladeleistung
+      selector:
+        entity:
+          domain: sensor
+    wallbox_status:
+      name: Wallbox Status
+      selector:
+        entity:
+          domain: sensor
+    max_current:
+      name: Maximaler Ladestrom
+      description: Maximale Stromstärke für das Laden
+      default: "16"
+      selector:
+        select:
+          options:
+            - "16"
+            - "25"
+          custom_value: false
+          sort: false
+  source_url: https://gist.github.com/iron-exx/f8041759540a08149a4fb78484b71693
+
+trigger:
+  - platform: state
+    entity_id: !input wallbox_status
+    to: "Charging Normal"
+  - platform: state
+    entity_id: !input wallbox_status
+    to: "Load Balancing Forced Off"
+  - platform: time_pattern
+    seconds: "/30"
+
+condition:
+  - condition: state
+    entity_id: !input switch
+    state: "on"
+  - condition: numeric_state
+    entity_id: !input battery_soc
+    above: !input min_battery_soc
+  - condition: or
+    conditions:
+      - condition: state
+        entity_id: !input wallbox_status
+        state: "Charging Normal"
+      - condition: state
+        entity_id: !input wallbox_status
+        state: "Load Balancing Forced Off"
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.platform == 'state' and trigger.to_state.state in ['Charging Normal', 'Load Balancing Forced Off'] }}
+        sequence:
+          - service: number.set_value
+            target:
+              entity_id: !input wallbox_current
+            data:
+              value: "{{ 16 if !input 'max_current' == '16' else 25 }}"
+          - delay: "00:00:30"
+
+  - service: number.set_value
+    target:
+      entity_id: !input wallbox_current
+    data:
+      value: >
+        {% set pv_power = states(!input 'pv_power') | float(0) %}
+        {% set house_consumption = states(!input 'house_consumption') | float(0) %}
+        {% set wallbox_power = states(!input 'wallbox_power') | float(0) %}
+        {% set actual_house_consumption = house_consumption - wallbox_power %}
+        {% set surplus_power = pv_power - actual_house_consumption %}
+        {% set max_current = 16 if !input 'max_current' == '16' else 25 %}
+        {% set min_current = 1 %}
+        {% set conversion_factor = 219 %}
+        {% set current = (surplus_power / conversion_factor) | int %}
+        {% if current > max_current %}
+          {{ max_current }}
+        {% elif current < min_current %}
+          {{ min_current }}
+        {% else %}
+          {{ current }}
+        {% endif %}
+
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input wallbox_status
+            state: "Finish Wait Disconnect"
+        sequence:
+          - service: number.set_value
+            target:
+              entity_id: !input wallbox_current
+            data:
+              value: "{{ 16 if !input 'max_current' == '16' else 25 }}"
+
+mode: single

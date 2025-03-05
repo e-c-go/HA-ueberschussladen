@@ -1,6 +1,7 @@
 blueprint:
   name: Überschussladen für Elektroauto
   description: Überschussladung basierend auf PV-Leistung, Hausverbrauch und Batteriespeicher
+  domain: automation
   homeassistant:
     min_version: "2023.12.0"
   input:

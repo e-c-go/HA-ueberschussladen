@@ -9,7 +9,6 @@ blueprint:
   input:
     min_charge_current:
       name: Minimaler Ladestrom (A)
-      description: Der kleinste erlaubte Ladestrom der Wallbox
       default: 6
       selector:
         number:
@@ -20,7 +19,6 @@ blueprint:
           step: 1
     max_charge_current:
       name: Maximaler Ladestrom (A)
-      description: Der höchste erlaubte Ladestrom der Wallbox
       default: 16
       selector:
         number:
@@ -31,7 +29,6 @@ blueprint:
           step: 1
     min_battery_soc:
       name: Minimaler Batterieladestand (%)
-      description: Mindestwert, bevor das Laden beginnt.
       default: 20
       selector:
         number:
@@ -42,8 +39,8 @@ blueprint:
           step: 1
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
-      description: Eine einzelne Entität, die positiv oder negativ sein kann. Falls nicht genutzt, lasse dieses Feld leer.
-      default: none
+      description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
@@ -51,14 +48,12 @@ blueprint:
           multiple: false
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
-      description: Falls die Netzeinspeisung als positiver Wert dargestellt wird, aktiviere diese Option.
       default: false
       selector:
         boolean:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
-      description: Falls die Netzeinspeisung separat gemessen wird. Falls nicht genutzt, lasse dieses Feld leer.
-      default: none
+      default: ""
       selector:
         entity:
           domain: sensor
@@ -66,8 +61,7 @@ blueprint:
           multiple: false
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
-      description: Falls der Netzbezug separat gemessen wird. Falls nicht genutzt, lasse dieses Feld leer.
-      default: none
+      default: ""
       selector:
         entity:
           domain: sensor
@@ -116,16 +110,6 @@ trigger:
   - platform: state
     entity_id: !input charger_status
     to: "Waiting"
-  - platform: state
-    entity_id: !input pv_power
-  - platform: state
-    entity_id: !input house_consumption
-  - platform: state
-    entity_id: !input net_power
-  - platform: state
-    entity_id: !input net_export
-  - platform: state
-    entity_id: !input net_import
   - platform: time_pattern
     seconds: "/30"
 
@@ -146,23 +130,23 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% set net_power = states(!input net_power) | float(none) %}
-        {% set net_export = states(!input net_export) | float(none) %}
-        {% set net_import = states(!input net_import) | float(none) %}
+        {% set net_power = states(!input net_power) | float(0) %}
+        {% set net_export = states(!input net_export) | float(0) %}
+        {% set net_import = states(!input net_import) | float(0) %}
         {% set house_consumption = states(!input house_consumption) | float(0) %}
         {% set pv_power = states(!input pv_power) | float(0) %}
         {% set min_current = !input min_charge_current | int %}
         {% set max_current = !input max_charge_current | int %}
-        {% set conversion_factor = 219 %}  # Umrechnungsfaktor W -> A für dreiphasige Ladung
+        {% set conversion_factor = 219 %}
 
         {# Falls eine einzelne Netzeinspeisung vorhanden ist, wird sie genutzt #}
-        {% if net_power not in [none, ''] %}
+        {% if net_power != 0 %}
           {% if is_state(!input invert_net_value, "true") %}
             {% set net_power = net_power * -1 %}
           {% endif %}
           {% set available_power = net_power %}
         {# Falls getrennte Werte für Einspeisung & Bezug genutzt werden #}
-        {% elif net_export not in [none, ''] and net_import not in [none, ''] %}
+        {% elif net_export != 0 or net_import != 0 %}
           {% set available_power = net_export - net_import %}
         {# Falls keine Netzwerte vorhanden sind, wird der PV-Überschuss berechnet #}
         {% else %}

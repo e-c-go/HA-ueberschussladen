@@ -40,35 +40,43 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
           step: 1
-    net_export:
-      name: Netzeinspeisung (W)
-      description: Aktuelle Netzeinspeisung (optional, wenn Netzbezug/Einspeisung als Einzelwert vorliegt)
+    net_power:
+      name: Netzeinspeisung/-bezug (W) [Einzelwert]
+      description: Eine einzelne Entität, die positiv oder negativ sein kann.
       selector:
         entity:
           domain: sensor
-          multiple: false
           device_class: power
-    net_import:
-      name: Netzbezug (W)
-      description: Aktueller Netzbezug (optional, wenn getrennte Werte genutzt werden)
-      selector:
-        entity:
-          domain: sensor
           multiple: false
-          device_class: power
     invert_net_value:
-      name: Vorzeichen umkehren
+      name: Vorzeichen umkehren (nur für Einzelwert)
       description: Falls die Netzeinspeisung als positiver Wert dargestellt wird, aktiviere diese Option.
       default: false
       selector:
         boolean:
+    net_export:
+      name: Netzeinspeisung (W) [Getrennte Werte]
+      description: Falls die Netzeinspeisung separat gemessen wird.
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    net_import:
+      name: Netzbezug (W) [Getrennte Werte]
+      description: Falls der Netzbezug separat gemessen wird.
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
         entity:
           domain: sensor
-          multiple: false
           device_class: power
+          multiple: false
     charger_current:
       name: Aktueller Ladestrom (A)
       selector:
@@ -85,15 +93,15 @@ blueprint:
       selector:
         entity:
           domain: sensor
-          multiple: false
           device_class: power
+          multiple: false
     pv_power:
       name: PV-Leistung (W)
       selector:
         entity:
           domain: sensor
-          multiple: false
           device_class: power
+          multiple: false
     charger_status:
       name: Wallbox Status / Mode
       selector:
@@ -109,6 +117,8 @@ trigger:
     entity_id: !input pv_power
   - platform: state
     entity_id: !input house_consumption
+  - platform: state
+    entity_id: !input net_power
   - platform: state
     entity_id: !input net_export
   - platform: state
@@ -133,21 +143,25 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% set net_export = states(!input net_export) | float(0) %}
-        {% set net_import = states(!input net_import) | float(0) %}
+        {% set net_power = states(!input net_power) | float(none) %}
+        {% set net_export = states(!input net_export) | float(none) %}
+        {% set net_import = states(!input net_import) | float(none) %}
         {% set house_consumption = states(!input house_consumption) | float(0) %}
         {% set pv_power = states(!input pv_power) | float(0) %}
-        {% set charger_power = states(!input charger_power) | float(0) %}
         {% set min_current = !input min_charge_current | int %}
         {% set max_current = !input max_charge_current | int %}
         {% set conversion_factor = 219 %}  # Umrechnungsfaktor W -> A für dreiphasige Ladung
 
-        {% if is_state(!input invert_net_value, "true") %}
-          {% set net_export = net_export * -1 %}
-        {% endif %}
-
-        {% if net_export > 0 %}
-          {% set available_power = net_export %}
+        {# Falls eine einzelne Netzeinspeisung vorhanden ist, wird sie genutzt #}
+        {% if net_power != none %}
+          {% if is_state(!input invert_net_value, "true") %}
+            {% set net_power = net_power * -1 %}
+          {% endif %}
+          {% set available_power = net_power %}
+        {# Falls getrennte Werte für Einspeisung & Bezug genutzt werden #}
+        {% elif net_export != none and net_import != none %}
+          {% set available_power = net_export - net_import %}
+        {# Falls keine Netzwerte vorhanden sind, wird der PV-Überschuss berechnet #}
         {% else %}
           {% set available_power = pv_power - house_consumption %}
         {% endif %}
@@ -161,5 +175,3 @@ action:
         {% else %}
           {{ new_current }}
         {% endif %}
-
-mode: restart

@@ -1,24 +1,38 @@
 blueprint:
-  name: Überschussladen für Elektroauto
-  description: Überschussladung basierend auf PV-Leistung, Hausverbrauch und Batteriespeicher
+  name: Dynamische Wallbox-Ladesteuerung
+  description: > 
+    Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug. 
+    Unterstützt Einzel- oder getrennte Netzeinspeisungswerte.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
   input:
-    switch:
-      name: Automatisierungsschalter
+    min_charge_current:
+      name: Minimaler Ladestrom (A)
+      description: Der kleinste erlaubte Ladestrom der Wallbox
+      default: 6
       selector:
-        entity:
-          domain: input_boolean
-    battery_soc:
-      name: Batterieladestand
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
+    max_charge_current:
+      name: Maximaler Ladestrom (A)
+      description: Der höchste erlaubte Ladestrom der Wallbox
+      default: 16
       selector:
-        entity:
-          domain: sensor
+        number:
+          min: 6
+          max: 32
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
     min_battery_soc:
-      name: Mindestbatterieladestand (%)
-      description: Mindestbatterieladestand in Prozent, bevor das Laden beginnt
-      default: 50
+      name: Minimaler Batterieladestand (%)
+      description: Mindestwert, bevor das Laden beginnt.
+      default: 20
       selector:
         number:
           min: 0
@@ -26,114 +40,126 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
           step: 1
-    pv_power:
-      name: PV-Leistung
+    net_export:
+      name: Netzeinspeisung (W)
+      description: Aktuelle Netzeinspeisung (optional, wenn Netzbezug/Einspeisung als Einzelwert vorliegt)
       selector:
         entity:
           domain: sensor
-    house_consumption:
-      name: Hausverbrauch
+          multiple: false
+          device_class: power
+    net_import:
+      name: Netzbezug (W)
+      description: Aktueller Netzbezug (optional, wenn getrennte Werte genutzt werden)
       selector:
         entity:
           domain: sensor
-    wallbox_current:
-      name: Wallbox Stromstärke
+          multiple: false
+          device_class: power
+    invert_net_value:
+      name: Vorzeichen umkehren
+      description: Falls die Netzeinspeisung als positiver Wert dargestellt wird, aktiviere diese Option.
+      default: false
+      selector:
+        boolean:
+    charger_power:
+      name: Aktuelle Ladeleistung (W)
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+          device_class: power
+    charger_current:
+      name: Aktueller Ladestrom (A)
       selector:
         entity:
           domain: number
-    wallbox_power:
-      name: Wallbox Ladeleistung
+          multiple: false
+    automation_switch:
+      name: Automatisierungsschalter
+      selector:
+        entity:
+          domain: input_boolean
+    house_consumption:
+      name: Hausverbrauch (W)
       selector:
         entity:
           domain: sensor
-    wallbox_status:
-      name: Wallbox Status
+          multiple: false
+          device_class: power
+    pv_power:
+      name: PV-Leistung (W)
       selector:
         entity:
           domain: sensor
-    max_current:
-      name: Maximaler Ladestrom
-      description: Maximale Stromstärke für das Laden
-      default: "16"
+          multiple: false
+          device_class: power
+    charger_status:
+      name: Wallbox Status / Mode
       selector:
-        select:
-          options:
-            - "16"
-            - "25"
-          custom_value: false
-          sort: false
+        entity:
+          domain: sensor
+          multiple: false
 
 trigger:
   - platform: state
-    entity_id: !input wallbox_status
-    to: "Charging Normal"
+    entity_id: !input charger_status
+    to: "Waiting"
   - platform: state
-    entity_id: !input wallbox_status
-    to: "Load Balancing Forced Off"
+    entity_id: !input pv_power
+  - platform: state
+    entity_id: !input house_consumption
+  - platform: state
+    entity_id: !input net_export
+  - platform: state
+    entity_id: !input net_import
   - platform: time_pattern
     seconds: "/30"
 
 condition:
   - condition: state
-    entity_id: !input switch
+    entity_id: !input automation_switch
     state: "on"
   - condition: numeric_state
-    entity_id: !input battery_soc
+    entity_id: !input min_battery_soc
     above: !input min_battery_soc
-  - condition: or
-    conditions:
-      - condition: state
-        entity_id: !input wallbox_status
-        state: "Charging Normal"
-      - condition: state
-        entity_id: !input wallbox_status
-        state: "Load Balancing Forced Off"
+  - condition: state
+    entity_id: !input charger_status
+    state: "Waiting"
 
 action:
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.platform == 'state' and trigger.to_state.state in ['Charging Normal', 'Load Balancing Forced Off'] }}"
-        sequence:
-          - service: number.set_value
-            target:
-              entity_id: !input wallbox_current
-            data:
-              value: "{{ 16 if is_number(!input max_current) and !input max_current | int == 16 else 25 }}"
-          - delay: "00:00:30"
-
   - service: number.set_value
     target:
-      entity_id: !input wallbox_current
+      entity_id: !input charger_current
     data:
       value: >
-        {% set pv_power = states(!input pv_power) | float(0) %}
+        {% set net_export = states(!input net_export) | float(0) %}
+        {% set net_import = states(!input net_import) | float(0) %}
         {% set house_consumption = states(!input house_consumption) | float(0) %}
-        {% set wallbox_power = states(!input wallbox_power) | float(0) %}
-        {% set actual_house_consumption = house_consumption - wallbox_power %}
-        {% set surplus_power = pv_power - actual_house_consumption %}
-        {% set max_current = 16 if is_number(!input max_current) and !input max_current | int == 16 else 25 %}
-        {% set min_current = 1 %}
-        {% set conversion_factor = 219 %}
-        {% set current = (surplus_power / conversion_factor) | int %}
-        {% if current > max_current %}
-          {{ max_current }}
-        {% elif current < min_current %}
-          {{ min_current }}
-        {% else %}
-          {{ current }}
+        {% set pv_power = states(!input pv_power) | float(0) %}
+        {% set charger_power = states(!input charger_power) | float(0) %}
+        {% set min_current = !input min_charge_current | int %}
+        {% set max_current = !input max_charge_current | int %}
+        {% set conversion_factor = 219 %}  # Umrechnungsfaktor W -> A für dreiphasige Ladung
+
+        {% if is_state(!input invert_net_value, "true") %}
+          {% set net_export = net_export * -1 %}
         {% endif %}
 
-  - choose:
-      - conditions:
-          - condition: state
-            entity_id: !input wallbox_status
-            state: "Finish Wait Disconnect"
-        sequence:
-          - service: number.set_value
-            target:
-              entity_id: !input wallbox_current
-            data:
-              value: "{{ 16 if is_number(!input max_current) and !input max_current | int == 16 else 25 }}"
+        {% if net_export > 0 %}
+          {% set available_power = net_export %}
+        {% else %}
+          {% set available_power = pv_power - house_consumption %}
+        {% endif %}
 
-mode: single
+        {% set new_current = (available_power / conversion_factor) | round(0) %}
+
+        {% if new_current > max_current %}
+          {{ max_current }}
+        {% elif new_current < min_current %}
+          {{ min_current }}
+        {% else %}
+          {{ new_current }}
+        {% endif %}
+
+mode: restart

@@ -1,7 +1,7 @@
 blueprint:
   name: Dynamische Wallbox-Ladesteuerung
   description: > 
-    Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug. 
+    Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
     Du kannst entweder eine einzelne Netzeinspeisungs-Entität oder getrennte Werte für Bezug & Einspeisung eingeben.
   domain: automation
   homeassistant:
@@ -43,12 +43,12 @@ blueprint:
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
       description: Eine einzelne Entität, die positiv oder negativ sein kann. Falls nicht genutzt, lasse dieses Feld leer.
+      default: none
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-      default: ""
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       description: Falls die Netzeinspeisung als positiver Wert dargestellt wird, aktiviere diese Option.
@@ -58,21 +58,21 @@ blueprint:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
       description: Falls die Netzeinspeisung separat gemessen wird. Falls nicht genutzt, lasse dieses Feld leer.
+      default: none
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-      default: ""
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       description: Falls der Netzbezug separat gemessen wird. Falls nicht genutzt, lasse dieses Feld leer.
+      default: none
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-      default: ""
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
@@ -156,13 +156,13 @@ action:
         {% set conversion_factor = 219 %}  # Umrechnungsfaktor W -> A für dreiphasige Ladung
 
         {# Falls eine einzelne Netzeinspeisung vorhanden ist, wird sie genutzt #}
-        {% if net_power != none and net_power != "" %}
+        {% if net_power not in [none, ''] %}
           {% if is_state(!input invert_net_value, "true") %}
             {% set net_power = net_power * -1 %}
           {% endif %}
           {% set available_power = net_power %}
         {# Falls getrennte Werte für Einspeisung & Bezug genutzt werden #}
-        {% elif net_export != none and net_import != none and net_export != "" and net_import != "" %}
+        {% elif net_export not in [none, ''] and net_import not in [none, ''] %}
           {% set available_power = net_export - net_import %}
         {# Falls keine Netzwerte vorhanden sind, wird der PV-Überschuss berechnet #}
         {% else %}

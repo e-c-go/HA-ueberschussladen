@@ -27,16 +27,12 @@ blueprint:
           unit_of_measurement: "A"
           mode: slider
           step: 1
-    min_battery_soc:
-      name: Minimaler Batterieladestand (%)
-      default: 20
+    charger_current:
+      name: Aktueller Ladestrom (A)
       selector:
-        number:
-          min: 0
-          max: 100
-          unit_of_measurement: "%"
-          mode: slider
-          step: 1
+        entity:
+          domain: number
+          multiple: false
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
       selector:
@@ -45,11 +41,6 @@ blueprint:
           device_class: power
           multiple: false
       default: null
-    invert_net_value:
-      name: Vorzeichen umkehren (nur für Einzelwert)
-      default: false
-      selector:
-        boolean:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
       selector:
@@ -66,38 +57,11 @@ blueprint:
           device_class: power
           multiple: false
       default: null
-    charger_power:
-      name: Aktuelle Ladeleistung (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-    charger_current:
-      name: Aktueller Ladestrom (A)
-      selector:
-        entity:
-          domain: number
-          multiple: false
     automation_switch:
       name: Automatisierungsschalter
       selector:
         entity:
           domain: input_boolean
-    house_consumption:
-      name: Hausverbrauch (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-    pv_power:
-      name: PV-Leistung (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
     charger_status:
       name: Wallbox Status / Mode
       selector:
@@ -112,13 +76,31 @@ trigger:
   - platform: time_pattern
     seconds: "/30"
 
+variables:
+  min_current: !input min_charge_current
+  max_current: !input max_charge_current
+  net_power_entity: !input net_power
+  net_export_entity: !input net_export
+  net_import_entity: !input net_import
+  net_power: "{{ states(net_power_entity) | float(0) if net_power_entity else 0 }}"
+  net_export: "{{ states(net_export_entity) | float(0) if net_export_entity else 0 }}"
+  net_import: "{{ states(net_import_entity) | float(0) if net_import_entity else 0 }}"
+  conversion_factor: 219
+  available_power: "{{ net_power if net_power != 0 else (net_export - net_import) }}"
+  new_current: "{{ (available_power / conversion_factor) | round(0) }}"
+  final_current: >-
+    {% if new_current > max_current %}
+      {{ max_current }}
+    {% elif new_current < min_current %}
+      {{ min_current }}
+    {% else %}
+      {{ new_current }}
+    {% endif %}
+
 condition:
   - condition: state
     entity_id: !input automation_switch
     state: "on"
-  - condition: numeric_state
-    entity_id: !input min_battery_soc
-    above: !input min_battery_soc
   - condition: state
     entity_id: !input charger_status
     state: "Waiting"
@@ -128,32 +110,4 @@ action:
     target:
       entity_id: !input charger_current
     data:
-      value: >
-        {% set min_current = (!input min_charge_current) | int %}
-        {% set max_current = (!input max_charge_current) | int %}
-        
-        {% set net_power_entity = !input net_power if !input net_power else none %}
-        {% set net_export_entity = !input net_export if !input net_export else none %}
-        {% set net_import_entity = !input net_import if !input net_import else none %}
-
-        {% set net_power = states(net_power_entity) | float(0) if net_power_entity else 0 %}
-        {% set net_export = states(net_export_entity) | float(0) if net_export_entity else 0 %}
-        {% set net_import = states(net_import_entity) | float(0) if net_import_entity else 0 %}
-        
-        {% set conversion_factor = 219 %}
-
-        {% if !input invert_net_value %}
-          {% set net_power = net_power * -1 %}
-        {% endif %}
-
-        {% set available_power = net_power if net_power != 0 else (net_export - net_import) %}
-
-        {% set new_current = (available_power / conversion_factor) | round(0) %}
-
-        {% if new_current > max_current %}
-          {{ max_current }}
-        {% elif new_current < min_current %}
-          {{ min_current }}
-        {% else %}
-          {{ new_current }}
-        {% endif %}
+      value: "{{ final_current }}"

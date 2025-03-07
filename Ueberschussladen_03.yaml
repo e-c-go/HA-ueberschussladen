@@ -1,9 +1,9 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung mit Anpassung des Ladestroms
+  name: Dynamische Wallbox-Ladesteuerung
   description: > 
     Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
     Die Wallbox wird auf 0A gesetzt, wenn der Batteriestand zu niedrig oder der Netzbezug zu hoch ist.
-    Neu: Die Ladung startet erst, wenn die Netzeinspeisung + Batterieladeleistung eine Mindestleistung überschreiten.
+    Neu: Die Ladung startet erst, wenn Netzeinspeisung + Batterieladeleistung eine Mindestleistung überschreiten.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
@@ -151,14 +151,14 @@ variables:
   battery_soc_entity: !input battery_soc
   invert_net_value: !input invert_net_value
 
-  net_power: "{{ states(net_power_entity) | float(0) if net_power_entity else 0 }}"
-  net_export: "{{ states(net_export_entity) | float(0) if net_export_entity else 0 }}"
-  net_import: "{{ states(net_import_entity) | float(0) if net_import_entity else 0 }}"
-  house_consumption: "{{ states(house_consumption_entity) | float(0) if house_consumption_entity else 0 }}"
-  pv_power: "{{ states(pv_power_entity) | float(0) if pv_power_entity else 0 }}"
-  battery_soc: "{{ states(battery_soc_entity) | float(0) if battery_soc_entity else 0 }}"
+  net_power: "{{ states(net_power_entity) | float(0) if net_power_entity != 'None' else 0 }}"
+  net_export: "{{ states(net_export_entity) | float(0) if net_export_entity != 'None' else 0 }}"
+  net_import: "{{ states(net_import_entity) | float(0) if net_import_entity != 'None' else 0 }}"
+  house_consumption: "{{ states(house_consumption_entity) | float(0) if house_consumption_entity != 'None' else 0 }}"
+  pv_power: "{{ states(pv_power_entity) | float(0) if pv_power_entity != 'None' else 0 }}"
+  battery_soc: "{{ states(battery_soc_entity) | float(0) if battery_soc_entity != 'None' else 0 }}"
 
-  battery_charge_power: "{{ states('sensor.battery_charge_power') | float(0) }}" 
+  battery_charge_power: "{{ states('sensor.battery_charge_power') | float(0) }}"
 
   conversion_factor: 219
 

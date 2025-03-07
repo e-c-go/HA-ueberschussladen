@@ -1,8 +1,8 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung mit Stopp-Logik
+  name: Dynamische Wallbox-Ladesteuerung mit Anpassung des Ladestroms
   description: > 
     Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
-    Die Wallbox wird automatisch gestoppt, wenn der Batteriestand zu niedrig oder der Netzbezug zu hoch ist.
+    Die Wallbox wird auf 0A gesetzt, wenn der Batteriestand zu niedrig oder der Netzbezug zu hoch ist.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
@@ -162,7 +162,9 @@ variables:
   new_current: "{{ (available_power / conversion_factor) | round(0) }}"
 
   final_current: >-
-    {% if new_current > max_current %}
+    {% if battery_soc < !input min_battery_soc or available_power < 500 %}
+      0
+    {% elif new_current > max_current %}
       {{ max_current }}
     {% elif new_current < min_current %}
       {{ min_current }}
@@ -178,34 +180,22 @@ condition:
 action:
   - choose:
       - conditions:
-          - condition: state
-            entity_id: !input automation_switch
-            state: "on"
           - condition: numeric_state
             entity_id: !input battery_soc
             below: !input min_battery_soc
         sequence:
-          - service: switch.turn_off
-            target:
-              entity_id: !input automation_switch
-          - service: notify.persistent_notification.create
+          - service: persistent_notification.create
             data:
-              title: "Wallbox gestoppt"
+              title: "Wallbox auf 0A gesetzt"
               message: "Batteriestand unter Minimum!"
       - conditions:
-          - condition: state
-            entity_id: !input automation_switch
-            state: "on"
           - condition: numeric_state
             entity_id: !input net_power
             below: 500
         sequence:
-          - service: switch.turn_off
-            target:
-              entity_id: !input automation_switch
-          - service: notify.persistent_notification.create
+          - service: persistent_notification.create
             data:
-              title: "Wallbox gestoppt"
+              title: "Wallbox auf 0A gesetzt"
               message: "Zu wenig Einspeisung!"
   - service: number.set_value
     target:

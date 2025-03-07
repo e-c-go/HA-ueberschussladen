@@ -39,13 +39,12 @@ blueprint:
           step: 1
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
-      description: Falls nicht genutzt, lasse dieses Feld leer.
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-      default: null
+      default: ""
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       default: false
@@ -58,7 +57,7 @@ blueprint:
           domain: sensor
           device_class: power
           multiple: false
-      default: null
+      default: ""
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       selector:
@@ -66,7 +65,7 @@ blueprint:
           domain: sensor
           device_class: power
           multiple: false
-      default: null
+      default: ""
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
@@ -130,28 +129,21 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% set net_power = states(!input net_power) | float(0) if !input net_power else 0 %}
-        {% set net_export = states(!input net_export) | float(0) if !input net_export else 0 %}
-        {% set net_import = states(!input net_import) | float(0) if !input net_import else 0 %}
-        {% set house_consumption = states(!input house_consumption) | float(0) %}
-        {% set pv_power = states(!input pv_power) | float(0) %}
-        {% set min_current = (!input min_charge_current) | int %}
-        {% set max_current = (!input max_charge_current) | int %}
+        {% set net_power_entity = !input net_power if !input net_power else none %}
+        {% set net_power = states(net_power_entity) | float(0) if net_power_entity else 0 %}
+        {% set net_export_entity = !input net_export if !input net_export else none %}
+        {% set net_export = states(net_export_entity) | float(0) if net_export_entity else 0 %}
+        {% set net_import_entity = !input net_import if !input net_import else none %}
+        {% set net_import = states(net_import_entity) | float(0) if net_import_entity else 0 %}
+        {% set min_current = (!input min_charge_current) | int(0) %}
+        {% set max_current = (!input max_charge_current) | int(0) %}
         {% set conversion_factor = 219 %}
 
-        {# Falls eine einzelne Netzeinspeisung vorhanden ist, wird sie genutzt #}
-        {% if net_power != 0 %}
-          {% if !input invert_net_value %}
-            {% set net_power = net_power * -1 %}
-          {% endif %}
-          {% set available_power = net_power %}
-        {# Falls getrennte Werte für Einspeisung & Bezug genutzt werden #}
-        {% elif net_export != 0 or net_import != 0 %}
-          {% set available_power = net_export - net_import %}
-        {# Falls keine Netzwerte vorhanden sind, wird der PV-Überschuss berechnet #}
-        {% else %}
-          {% set available_power = pv_power - house_consumption %}
+        {% if !input invert_net_value %}
+          {% set net_power = net_power * -1 %}
         {% endif %}
+
+        {% set available_power = net_power if net_power != 0 else (net_export - net_import) %}
 
         {% set new_current = (available_power / conversion_factor) | round(0) %}
 

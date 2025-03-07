@@ -1,5 +1,5 @@
 blueprint:
-  name: Test Blueprint Fix 2
+  name: Test Blueprint Fix 3
   description: Testet das Setzen einer Zahl auf eine Input-Number.
   domain: automation
   input:
@@ -23,9 +23,12 @@ trigger:
   - platform: time_pattern
     seconds: "/10"
 
+variables:
+  fixed_value: !input test_number  # Hier speichern wir den Wert als Variable
+
 action:
   - service: number.set_value
     target:
       entity_id: !input test_target
     data:
-      value: !input test_number
+      value: "{{ fixed_value }}"  # Nutzt die gespeicherte Variable

@@ -124,7 +124,7 @@ trigger:
 variables:
   min_current: !input min_charge_current
   max_current: !input max_charge_current
-  min_battery_soc: !input min_battery_soc  # 🛠️ FIX: Kein `!input` in Templates!
+  min_battery_soc_value: !input min_battery_soc  # ✅ FIX: Kein `!input` mehr direkt in Templates!
   net_power_entity: !input net_power
   net_export_entity: !input net_export
   net_import_entity: !input net_import
@@ -163,7 +163,7 @@ variables:
   new_current: "{{ (available_power / conversion_factor) | round(0) }}"
 
   final_current: >-
-    {% if battery_soc < min_battery_soc or available_power < 500 %}
+    {% if battery_soc < min_battery_soc_value or available_power < 500 %}
       0
     {% elif new_current > max_current %}
       {{ max_current }}

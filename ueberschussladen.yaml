@@ -129,16 +129,15 @@ action:
       entity_id: !input charger_current
     data:
       value: >
+        {% set min_current = !input min_charge_current | int(0) %}
+        {% set max_current = !input max_charge_current | int(0) %}
+
         {% set net_power_entity = !input net_power if !input net_power else none %}
         {% set net_power = states(net_power_entity) | float(0) if net_power_entity else 0 %}
         {% set net_export_entity = !input net_export if !input net_export else none %}
         {% set net_export = states(net_export_entity) | float(0) if net_export_entity else 0 %}
         {% set net_import_entity = !input net_import if !input net_import else none %}
         {% set net_import = states(net_import_entity) | float(0) if net_import_entity else 0 %}
-        
-        {# Sicherstellen, dass min_charge_current und max_charge_current Integer sind #}
-        {% set min_current = !input min_charge_current | int %}
-        {% set max_current = !input max_charge_current | int %}
         
         {% set conversion_factor = 219 %}
 

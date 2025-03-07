@@ -1,0 +1,31 @@
+blueprint:
+  name: Test Blueprint Minimal
+  description: Testet das Setzen einer Zahl auf eine Input-Number.
+  domain: automation
+  input:
+    test_number:
+      name: Testwert
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
+    test_target:
+      name: Test-Entität
+      selector:
+        entity:
+          domain: number
+          multiple: false
+
+trigger:
+  - platform: time_pattern
+    seconds: "/10"
+
+action:
+  - service: number.set_value
+    target:
+      entity_id: !input test_target
+    data:
+      value: "{{ !input test_number | int }}"

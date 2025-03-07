@@ -1,0 +1,214 @@
+blueprint:
+  name: Dynamische Wallbox-Ladesteuerung mit Stopp-Logik
+  description: > 
+    Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
+    Die Wallbox wird automatisch gestoppt, wenn der Batteriestand zu niedrig oder der Netzbezug zu hoch ist.
+  domain: automation
+  homeassistant:
+    min_version: "2023.12.0"
+  input:
+    min_charge_current:
+      name: Minimaler Ladestrom (A)
+      default: 6
+      selector:
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
+    max_charge_current:
+      name: Maximaler Ladestrom (A)
+      default: 16
+      selector:
+        number:
+          min: 6
+          max: 32
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
+    charger_current:
+      name: Aktueller Ladestrom (A)
+      selector:
+        entity:
+          domain: number
+          multiple: false
+    net_power:
+      name: Netzeinspeisung/-bezug (W) [Einzelwert]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: null
+    invert_net_value:
+      name: Vorzeichen umkehren (nur für Einzelwert)
+      default: false
+      selector:
+        boolean:
+    net_export:
+      name: Netzeinspeisung (W) [Getrennte Werte]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: null
+    net_import:
+      name: Netzbezug (W) [Getrennte Werte]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: null
+    min_battery_soc:
+      name: Minimaler Batterieladestand (%)
+      default: 20
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+          step: 1
+    battery_soc:
+      name: Aktueller Batteriestand (%)
+      selector:
+        entity:
+          domain: sensor
+          device_class: battery
+          multiple: false
+    automation_switch:
+      name: Automatisierungsschalter (Überschussladen)
+      selector:
+        entity:
+          domain: input_boolean
+    house_consumption:
+      name: Hausverbrauch (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    pv_power:
+      name: PV-Leistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    charger_status:
+      name: Wallbox Status / Mode
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+
+trigger:
+  - platform: state
+    entity_id: !input charger_status
+    to: "Waiting"
+  - platform: state
+    entity_id: !input charger_status
+    to: "Charging"
+  - platform: numeric_state
+    entity_id: !input battery_soc
+    below: !input min_battery_soc
+  - platform: numeric_state
+    entity_id: !input net_power
+    below: 500  # Falls Einspeisung zu gering, Stoppen prüfen.
+  - platform: time_pattern
+    seconds: "/30"
+
+variables:
+  min_current: !input min_charge_current
+  max_current: !input max_charge_current
+  net_power_entity: !input net_power
+  net_export_entity: !input net_export
+  net_import_entity: !input net_import
+  house_consumption_entity: !input house_consumption
+  pv_power_entity: !input pv_power
+  battery_soc_entity: !input battery_soc
+  automation_switch_entity: !input automation_switch
+  invert_net_value: !input invert_net_value
+
+  net_power: "{{ states(net_power_entity) | float(0) if net_power_entity else 0 }}"
+  net_export: "{{ states(net_export_entity) | float(0) if net_export_entity else 0 }}"
+  net_import: "{{ states(net_import_entity) | float(0) if net_import_entity else 0 }}"
+  house_consumption: "{{ states(house_consumption_entity) | float(0) if house_consumption_entity else 0 }}"
+  pv_power: "{{ states(pv_power_entity) | float(0) if pv_power_entity else 0 }}"
+  battery_soc: "{{ states(battery_soc_entity) | float(0) if battery_soc_entity else 0 }}"
+  automation_switch: "{{ states(automation_switch_entity) }}"
+
+  conversion_factor: 219
+
+  adjusted_net_power: >-
+    {% if invert_net_value %}
+      {{ net_power * -1 }}
+    {% else %}
+      {{ net_power }}
+    {% endif %}
+
+  available_power: >-
+    {% if net_power_entity %}
+      {{ adjusted_net_power }}
+    {% elif net_export_entity and net_import_entity %}
+      {{ net_export - net_import }}
+    {% else %}
+      {{ pv_power - house_consumption }}
+    {% endif %}
+
+  new_current: "{{ (available_power / conversion_factor) | round(0) }}"
+
+  final_current: >-
+    {% if new_current > max_current %}
+      {{ max_current }}
+    {% elif new_current < min_current %}
+      {{ min_current }}
+    {% else %}
+      {{ new_current }}
+    {% endif %}
+
+condition:
+  - condition: state
+    entity_id: !input automation_switch
+    state: "on"
+
+action:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input automation_switch
+            state: "on"
+          - condition: numeric_state
+            entity_id: !input battery_soc
+            below: !input min_battery_soc
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input automation_switch
+          - service: notify.persistent_notification.create
+            data:
+              title: "Wallbox gestoppt"
+              message: "Batteriestand unter Minimum!"
+      - conditions:
+          - condition: state
+            entity_id: !input automation_switch
+            state: "on"
+          - condition: numeric_state
+            entity_id: !input net_power
+            below: 500
+        sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: !input automation_switch
+          - service: notify.persistent_notification.create
+            data:
+              title: "Wallbox gestoppt"
+              message: "Zu wenig Einspeisung!"
+  - service: number.set_value
+    target:
+      entity_id: !input charger_current
+    data:
+      value: "{{ final_current }}"

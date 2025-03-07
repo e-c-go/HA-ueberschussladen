@@ -1,5 +1,5 @@
 blueprint:
-  name: Test Blueprint Fix
+  name: Test Blueprint Fix 2
   description: Testet das Setzen einer Zahl auf eine Input-Number.
   domain: automation
   input:
@@ -28,6 +28,4 @@ action:
     target:
       entity_id: !input test_target
     data:
-      value: >
-        {% set number = !input test_number %}
-        {{ number | int }}
+      value: !input test_number

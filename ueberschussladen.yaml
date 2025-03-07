@@ -40,7 +40,6 @@ blueprint:
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
       description: Falls nicht genutzt, lasse dieses Feld leer.
-      default: ""
       selector:
         entity:
           domain: sensor
@@ -53,7 +52,6 @@ blueprint:
         boolean:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
-      default: ""
       selector:
         entity:
           domain: sensor
@@ -61,7 +59,6 @@ blueprint:
           multiple: false
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
-      default: ""
       selector:
         entity:
           domain: sensor
@@ -130,18 +127,18 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% set net_power = states(entity_id=(!input net_power|string)) | float(0) %}
-        {% set net_export = states(entity_id=(!input net_export|string)) | float(0) %}
-        {% set net_import = states(entity_id=(!input net_import|string)) | float(0) %}
-        {% set house_consumption = states(entity_id=(!input house_consumption|string)) | float(0) %}
-        {% set pv_power = states(entity_id=(!input pv_power|string)) | float(0) %}
-        {% set min_current = (!input min_charge_current|string) | int %}
-        {% set max_current = (!input max_charge_current|string) | int %}
+        {% set net_power = states(!input net_power) | float(0) if !input net_power else 0 %}
+        {% set net_export = states(!input net_export) | float(0) if !input net_export else 0 %}
+        {% set net_import = states(!input net_import) | float(0) if !input net_import else 0 %}
+        {% set house_consumption = states(!input house_consumption) | float(0) %}
+        {% set pv_power = states(!input pv_power) | float(0) %}
+        {% set min_current = (!input min_charge_current) | int %}
+        {% set max_current = (!input max_charge_current) | int %}
         {% set conversion_factor = 219 %}
 
         {# Falls eine einzelne Netzeinspeisung vorhanden ist, wird sie genutzt #}
         {% if net_power != 0 %}
-          {% if is_state(entity_id=(!input invert_net_value|string), state="true") %}
+          {% if !input invert_net_value %}
             {% set net_power = net_power * -1 %}
           {% endif %}
           {% set available_power = net_power %}

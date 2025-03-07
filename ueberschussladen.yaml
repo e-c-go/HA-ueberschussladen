@@ -41,6 +41,11 @@ blueprint:
           device_class: power
           multiple: false
       default: null
+    invert_net_value:
+      name: Vorzeichen umkehren (nur für Einzelwert)
+      default: false
+      selector:
+        boolean:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
       selector:
@@ -62,6 +67,20 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
+    house_consumption:
+      name: Hausverbrauch (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    pv_power:
+      name: PV-Leistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
     charger_status:
       name: Wallbox Status / Mode
       selector:
@@ -82,12 +101,35 @@ variables:
   net_power_entity: !input net_power
   net_export_entity: !input net_export
   net_import_entity: !input net_import
+  house_consumption_entity: !input house_consumption
+  pv_power_entity: !input pv_power
+
   net_power: "{{ states(net_power_entity) | float(0) if net_power_entity else 0 }}"
   net_export: "{{ states(net_export_entity) | float(0) if net_export_entity else 0 }}"
   net_import: "{{ states(net_import_entity) | float(0) if net_import_entity else 0 }}"
+  house_consumption: "{{ states(house_consumption_entity) | float(0) if house_consumption_entity else 0 }}"
+  pv_power: "{{ states(pv_power_entity) | float(0) if pv_power_entity else 0 }}"
+  
   conversion_factor: 219
-  available_power: "{{ net_power if net_power != 0 else (net_export - net_import) }}"
+
+  adjusted_net_power: >-
+    {% if !input invert_net_value %}
+      {{ net_power * -1 }}
+    {% else %}
+      {{ net_power }}
+    {% endif %}
+
+  available_power: >-
+    {% if net_power_entity %}
+      {{ adjusted_net_power }}
+    {% elif net_export_entity and net_import_entity %}
+      {{ net_export - net_import }}
+    {% else %}
+      {{ pv_power - house_consumption }}
+    {% endif %}
+
   new_current: "{{ (available_power / conversion_factor) | round(0) }}"
+
   final_current: >-
     {% if new_current > max_current %}
       {{ max_current }}

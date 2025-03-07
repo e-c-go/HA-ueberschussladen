@@ -45,6 +45,7 @@ blueprint:
           domain: sensor
           device_class: power
           multiple: false
+      default: null
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       default: false
@@ -57,6 +58,7 @@ blueprint:
           domain: sensor
           device_class: power
           multiple: false
+      default: null
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       selector:
@@ -64,6 +66,7 @@ blueprint:
           domain: sensor
           device_class: power
           multiple: false
+      default: null
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:

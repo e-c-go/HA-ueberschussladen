@@ -107,7 +107,6 @@ blueprint:
           multiple: false
     min_feed_in_power:
       name: Mindest-Netzeinspeisung (W) für das Laden
-      description: Mindestleistung, die ins Netz eingespeist werden muss, damit die Ladung nicht gestoppt wird.
       default: 500
       selector:
         number:
@@ -118,7 +117,6 @@ blueprint:
           step: 50
     min_start_power:
       name: Mindest-Gesamtleistung für Ladestart (W)
-      description: Die Summe aus Einspeisung, Batterieladeleistung und Wallbox-Leistung muss diesen Wert überschreiten, damit geladen werden darf.
       default: 1500
       selector:
         number:
@@ -145,28 +143,36 @@ variables:
   min_feed_in_power: !input min_feed_in_power
   min_start_power: !input min_start_power
 
-  net_power: "{{ states(!input net_power) | float(0) if !input net_power else 0 }}"
-  net_export: "{{ states(!input net_export) | float(0) if !input net_export else 0 }}"
-  net_import: "{{ states(!input net_import) | float(0) if !input net_import else 0 }}"
-  house_consumption: "{{ states(!input house_consumption) | float(0) if !input house_consumption else 0 }}"
-  pv_power: "{{ states(!input pv_power) | float(0) if !input pv_power else 0 }}"
-  battery_soc: "{{ states(!input battery_soc) | float(0) if !input battery_soc else 0 }}"
+  net_power_entity: !input net_power
+  net_export_entity: !input net_export
+  net_import_entity: !input net_import
+  house_consumption_entity: !input house_consumption
+  pv_power_entity: !input pv_power
+  battery_soc_entity: !input battery_soc
+  invert_net_value: !input invert_net_value
 
-  battery_charge_power: "{{ states('sensor.battery_charge_power') | float(0) }}" # Batterie-Ladeleistung
+  net_power: "{{ states(net_power_entity) | float(0) if net_power_entity else 0 }}"
+  net_export: "{{ states(net_export_entity) | float(0) if net_export_entity else 0 }}"
+  net_import: "{{ states(net_import_entity) | float(0) if net_import_entity else 0 }}"
+  house_consumption: "{{ states(house_consumption_entity) | float(0) if house_consumption_entity else 0 }}"
+  pv_power: "{{ states(pv_power_entity) | float(0) if pv_power_entity else 0 }}"
+  battery_soc: "{{ states(battery_soc_entity) | float(0) if battery_soc_entity else 0 }}"
+
+  battery_charge_power: "{{ states('sensor.battery_charge_power') | float(0) }}" 
 
   conversion_factor: 219
 
   adjusted_net_power: >-
-    {% if !input invert_net_value %}
+    {% if invert_net_value %}
       {{ net_power * -1 }}
     {% else %}
       {{ net_power }}
     {% endif %}
 
   available_power: >-
-    {% if !input net_power %}
+    {% if net_power_entity %}
       {{ adjusted_net_power }}
-    {% elif !input net_export and !input net_import %}
+    {% elif net_export_entity and net_import_entity %}
       {{ net_export - net_import }}
     {% else %}
       {{ pv_power - house_consumption }}

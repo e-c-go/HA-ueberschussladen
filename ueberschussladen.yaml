@@ -27,12 +27,101 @@ blueprint:
           unit_of_measurement: "A"
           mode: slider
           step: 1
+    min_battery_soc:
+      name: Minimaler Batterieladestand (%)
+      default: 20
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+          step: 1
+    net_power:
+      name: Netzeinspeisung/-bezug (W) [Einzelwert]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: ""
+    invert_net_value:
+      name: Vorzeichen umkehren (nur für Einzelwert)
+      default: false
+      selector:
+        boolean:
+    net_export:
+      name: Netzeinspeisung (W) [Getrennte Werte]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: ""
+    net_import:
+      name: Netzbezug (W) [Getrennte Werte]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: ""
+    charger_power:
+      name: Aktuelle Ladeleistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
     charger_current:
       name: Aktueller Ladestrom (A)
       selector:
         entity:
           domain: number
           multiple: false
+    automation_switch:
+      name: Automatisierungsschalter
+      selector:
+        entity:
+          domain: input_boolean
+    house_consumption:
+      name: Hausverbrauch (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    pv_power:
+      name: PV-Leistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    charger_status:
+      name: Wallbox Status / Mode
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+
+trigger:
+  - platform: state
+    entity_id: !input charger_status
+    to: "Waiting"
+  - platform: time_pattern
+    seconds: "/30"
+
+condition:
+  - condition: state
+    entity_id: !input automation_switch
+    state: "on"
+  - condition: numeric_state
+    entity_id: !input min_battery_soc
+    above: !input min_battery_soc
+  - condition: state
+    entity_id: !input charger_status
+    state: "Waiting"
 
 action:
   - service: number.set_value
@@ -40,11 +129,30 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% set min_current = (!input min_charge_current) | int %}
-        {% set max_current = (!input max_charge_current) | int %}
+        {% set min_current = !input min_charge_current | int %}
+        {% set max_current = !input max_charge_current | int %}
         
-        {% if min_current > max_current %}
+        {% set net_power_entity = !input net_power if !input net_power else none %}
+        {% set net_power = states(net_power_entity) | float(0) if net_power_entity else 0 %}
+        {% set net_export_entity = !input net_export if !input net_export else none %}
+        {% set net_export = states(net_export_entity) | float(0) if net_export_entity else 0 %}
+        {% set net_import_entity = !input net_import if !input net_import else none %}
+        {% set net_import = states(net_import_entity) | float(0) if net_import_entity else 0 %}
+        
+        {% set conversion_factor = 219 %}
+
+        {% if !input invert_net_value %}
+          {% set net_power = net_power * -1 %}
+        {% endif %}
+
+        {% set available_power = net_power if net_power != 0 else (net_export - net_import) %}
+
+        {% set new_current = (available_power / conversion_factor) | round(0) %}
+
+        {% if new_current > max_current %}
           {{ max_current }}
-        {% else %}
+        {% elif new_current < min_current %}
           {{ min_current }}
+        {% else %}
+          {{ new_current }}
         {% endif %}

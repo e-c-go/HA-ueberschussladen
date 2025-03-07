@@ -1,0 +1,206 @@
+blueprint:
+  name: Dynamische Wallbox-Ladesteuerung mit Anpassung des Ladestroms
+  description: > 
+    Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
+    Die Wallbox wird auf 0A gesetzt, wenn der Batteriestand zu niedrig oder der Netzbezug zu hoch ist.
+    Neu: Die Ladung startet erst, wenn die Netzeinspeisung + Batterieladeleistung eine Mindestleistung überschreiten.
+  domain: automation
+  homeassistant:
+    min_version: "2023.12.0"
+  input:
+    min_charge_current:
+      name: Minimaler Ladestrom (A)
+      default: 6
+      selector:
+        number:
+          min: 0
+          max: 10
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
+    max_charge_current:
+      name: Maximaler Ladestrom (A)
+      default: 16
+      selector:
+        number:
+          min: 6
+          max: 32
+          unit_of_measurement: "A"
+          mode: slider
+          step: 1
+    charger_current:
+      name: Aktueller Ladestrom (A)
+      selector:
+        entity:
+          domain: number
+          multiple: false
+    net_power:
+      name: Netzeinspeisung/-bezug (W) [Einzelwert]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: null
+    invert_net_value:
+      name: Vorzeichen umkehren (nur für Einzelwert)
+      default: false
+      selector:
+        boolean:
+    net_export:
+      name: Netzeinspeisung (W) [Getrennte Werte]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: null
+    net_import:
+      name: Netzbezug (W) [Getrennte Werte]
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+      default: null
+    min_battery_soc:
+      name: Minimaler Batterieladestand (%)
+      default: 20
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+          mode: slider
+          step: 1
+    battery_soc:
+      name: Aktueller Batteriestand (%)
+      selector:
+        entity:
+          domain: sensor
+          device_class: battery
+          multiple: false
+    automation_switch:
+      name: Automatisierungsschalter (Überschussladen)
+      selector:
+        entity:
+          domain: input_boolean
+    house_consumption:
+      name: Hausverbrauch (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    pv_power:
+      name: PV-Leistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    charger_status:
+      name: Wallbox Status / Mode
+      selector:
+        entity:
+          domain: sensor
+          multiple: false
+    min_feed_in_power:
+      name: Mindest-Netzeinspeisung (W) für das Laden
+      description: Mindestleistung, die ins Netz eingespeist werden muss, damit die Ladung nicht gestoppt wird.
+      default: 500
+      selector:
+        number:
+          min: 0
+          max: 2000
+          unit_of_measurement: "W"
+          mode: slider
+          step: 50
+    min_start_power:
+      name: Mindest-Gesamtleistung für Ladestart (W)
+      description: Die Summe aus Einspeisung, Batterieladeleistung und Wallbox-Leistung muss diesen Wert überschreiten, damit geladen werden darf.
+      default: 1500
+      selector:
+        number:
+          min: 500
+          max: 5000
+          unit_of_measurement: "W"
+          mode: box
+          step: 100
+
+trigger:
+  - platform: state
+    entity_id: !input charger_status
+    to: "Waiting"
+  - platform: state
+    entity_id: !input charger_status
+    to: "Charging"
+  - platform: time_pattern
+    seconds: "/30"
+
+variables:
+  min_current: !input min_charge_current
+  max_current: !input max_charge_current
+  min_battery_soc_value: !input min_battery_soc
+  min_feed_in_power: !input min_feed_in_power
+  min_start_power: !input min_start_power
+
+  net_power: "{{ states(!input net_power) | float(0) if !input net_power else 0 }}"
+  net_export: "{{ states(!input net_export) | float(0) if !input net_export else 0 }}"
+  net_import: "{{ states(!input net_import) | float(0) if !input net_import else 0 }}"
+  house_consumption: "{{ states(!input house_consumption) | float(0) if !input house_consumption else 0 }}"
+  pv_power: "{{ states(!input pv_power) | float(0) if !input pv_power else 0 }}"
+  battery_soc: "{{ states(!input battery_soc) | float(0) if !input battery_soc else 0 }}"
+
+  battery_charge_power: "{{ states('sensor.battery_charge_power') | float(0) }}" # Batterie-Ladeleistung
+
+  conversion_factor: 219
+
+  adjusted_net_power: >-
+    {% if !input invert_net_value %}
+      {{ net_power * -1 }}
+    {% else %}
+      {{ net_power }}
+    {% endif %}
+
+  available_power: >-
+    {% if !input net_power %}
+      {{ adjusted_net_power }}
+    {% elif !input net_export and !input net_import %}
+      {{ net_export - net_import }}
+    {% else %}
+      {{ pv_power - house_consumption }}
+    {% endif %}
+
+  available_total_power: "{{ available_power + battery_charge_power }}"
+
+  new_current: "{{ (available_total_power / conversion_factor) | round(0) }}"
+
+  final_current: >-
+    {% if battery_soc < min_battery_soc_value or available_power < min_feed_in_power %}
+      0
+    {% elif available_total_power < min_start_power %}
+      0
+    {% elif new_current > max_current %}
+      {{ max_current }}
+    {% elif new_current < min_current %}
+      {{ min_current }}
+    {% else %}
+      {{ new_current }}
+    {% endif %}
+
+condition:
+  - condition: state
+    entity_id: !input automation_switch
+    state: "on"
+
+action:
+  - service: number.set_value
+    target:
+      entity_id: !input charger_current
+    data:
+      value: "{{ final_current }}"
+  - service: persistent_notification.create
+    data:
+      title: "Wallbox Ladung angepasst"
+      message: "Neuer Ladestrom: {{ final_current }}A"

@@ -156,8 +156,8 @@ variables:
   pv_power_entity: !input pv_power
   battery_soc_entity: !input battery_soc
   invert_net_value_entity: !input invert_net_value
-  invert_net_value: "{{ is_state(invert_net_value_entity, 'on') }}"
-  
+  invert_net_value: "{{ is_state(invert_net_value_entity, 'on') | string }}"
+
 
   net_power: "{{ states(net_power_entity) | float(0) if net_power_entity != 'None' else 0 }}"
   net_export: "{{ states(net_export_entity) | float(0) if net_export_entity != 'None' else 0 }}"

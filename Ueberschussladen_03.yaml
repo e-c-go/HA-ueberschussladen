@@ -130,9 +130,15 @@ trigger:
   - platform: state
     entity_id: !input charger_status
     to: "Waiting"
+    from: "Not Charging"  # Triggert auch, wenn vorher ein anderer Modus war.
   - platform: state
     entity_id: !input charger_status
     to: "Charging"
+    from: "Waiting"
+  - platform: state
+    entity_id: !input charger_status
+    to: "Charging"
+    from: "Not Charging"
   - platform: time_pattern
     seconds: "/30"
 

@@ -158,7 +158,6 @@ variables:
   invert_net_value_entity: !input invert_net_value
   invert_net_value: "{{ is_state(invert_net_value_entity, 'on') | string }}"
 
-
   net_power: "{{ states(net_power_entity) | float(0) if net_power_entity != 'None' else 0 }}"
   net_export: "{{ states(net_export_entity) | float(0) if net_export_entity != 'None' else 0 }}"
   net_import: "{{ states(net_import_entity) | float(0) if net_import_entity != 'None' else 0 }}"

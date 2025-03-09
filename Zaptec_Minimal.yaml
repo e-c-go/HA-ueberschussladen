@@ -1,7 +1,7 @@
 blueprint:
   name: Test Wallbox Steuerung (Minimal)
   description: >
-    Einfache Steuerung des Ladestroms basierend auf PV-Überschuss und Netzeinspeisung.
+    Einfache Steuerung des Ladestroms – Testversion ohne Berechnungen.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
@@ -12,44 +12,6 @@ blueprint:
       selector:
         entity:
           domain: number
-    pv_power:
-      name: PV-Leistung (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-    house_consumption:
-      name: Hausverbrauch (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-    net_power:
-      name: Netzeinspeisung/-bezug (W)
-      description: Falls nicht genutzt, lasse dieses Feld leer.
-      default: ""
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-    min_charge_current:
-      name: Minimaler Ladestrom (A)
-      default: 6
-      selector:
-        number:
-          min: 0
-          max: 10
-          mode: slider
-          step: 1
-    max_charge_current:
-      name: Maximaler Ladestrom (A)
-      default: 16
-      selector:
-        number:
-          min: 6
-          max: 32
-          mode: slider
-          step: 1
 
 trigger:
   - platform: time_pattern
@@ -60,4 +22,4 @@ action:
     target:
       entity_id: !input charger_current
     data:
-      value: "{{ ([((states(!input net_power) | float(0) if !input net_power else states(!input pv_power) | float(0) - states(!input house_consumption) | float(0)) / 219) | round(0), !input min_charge_current | int] | max, !input max_charge_current | int] | min) | string }}"
+      value: "10"

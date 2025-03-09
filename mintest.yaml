@@ -1,54 +1,51 @@
 blueprint:
-  name: Test Berechnung mit Ladestrom & Min/Max Slider
+  name: Solar- und Ladeleistungsberechnung
   description: >
-    Wählt sechs Sensoren aus:
-    - Multipliziert den ersten Wert mit 1000
-    - Zieht den Hausverbrauch & Netzleistung ab
-    - Zeigt Batterieentladung, Ladestationsleistung & Ladestrom an
-    - Ermöglicht die Eingabe von min/max Ladestrom als Slider
+    Berechnet die verfügbare Ladeleistung basierend auf Solarleistung, Netzbezug, Hausverbrauch und Batterie.
+    Zeigt zusätzlich die aktuelle Ladeleistung und Ladestromgrenzen an.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
 
   input:
-    sensor_1:
-      name: Erster Sensor (wird mit 1000 multipliziert)
+    solar_power:
+      name: Solar Power (kW)
       selector:
         entity:
           domain: sensor
           device_class: power
-    sensor_house_consumption:
-      name: Hausverbrauch (W)
+    grid_feed:
+      name: Grid Feed (W)
       selector:
         entity:
           domain: sensor
           device_class: power
-    sensor_2:
-      name: Zweiter Sensor (z. B. Netzbezug/-einspeisung, wird abgezogen)
+    home_consumption:
+      name: Home Consumption (W)
       selector:
         entity:
           domain: sensor
           device_class: power
-    sensor_battery:
-      name: Batterieentladung (W)
+    battery_charge_discharge:
+      name: Battery Charge/-discharge (kW)
       selector:
         entity:
           domain: sensor
           device_class: power
-    sensor_charger:
-      name: Ladestationsleistung (W)
+    charging_station_power:
+      name: Charging Station Power (kW)
       selector:
         entity:
           domain: sensor
           device_class: power
-    sensor_charger_current:
-      name: Aktueller Ladestrom (A)
+    charging_current:
+      name: Charging Current (A)
       selector:
         entity:
           domain: sensor
           device_class: current
     min_charging_current:
-      name: Minimaler Ladestrom (A)
+      name: Minimal Charging Current (A)
       selector:
         number:
           min: 6
@@ -56,7 +53,7 @@ blueprint:
           step: 1
           mode: slider
     max_charging_current:
-      name: Maximaler Ladestrom (A)
+      name: Maximal Charging Current (A)
       selector:
         number:
           min: 6
@@ -65,24 +62,17 @@ blueprint:
           mode: slider
 
 variables:
-  first_sensor: !input sensor_1
-  house_sensor: !input sensor_house_consumption
-  second_sensor: !input sensor_2
-  battery_sensor: !input sensor_battery
-  charger_sensor: !input sensor_charger
-  charger_current_sensor: !input sensor_charger_current
-
-  first_value: "{{ states(first_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
-  house_value: "{{ states(house_sensor) | float(0) }}"
-  second_value: "{{ states(second_sensor) | float(0) }}"
-  battery_value: "{{ states(battery_sensor) | float(0) }}"
-  charger_value: "{{ states(charger_sensor) | float(0) }}"
-  charger_current_value: "{{ states(charger_current_sensor) | float(0) }}"
+  solar_value: "{{ states(!input solar_power) | float(0) * 1000 }}"  # Umrechnung kW → W
+  grid_feed_value: "{{ states(!input grid_feed) | float(0) }}"
+  home_consumption_value: "{{ states(!input home_consumption) | float(0) }}"
+  battery_value: "{{ states(!input battery_charge_discharge) | float(0) * 1000 }}"  # Umrechnung kW → W
+  charger_power_value: "{{ states(!input charging_station_power) | float(0) * 1000 }}"  # Umrechnung kW → W
+  charger_current_value: "{{ states(!input charging_current) | float(0) }}"
   
   min_charger_current_value: !input min_charging_current
   max_charger_current_value: !input max_charging_current
 
-  result: "{{ first_value - second_value - house_value }}"
+  available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
 trigger:
   - platform: time_pattern
@@ -91,16 +81,16 @@ trigger:
 action:
   - service: persistent_notification.create
     data:
-      title: "DEBUG: Berechnung mit Ladestrom & Min/Max Slider"
+      title: "Solar- & Ladeleistungsberechnung"
       message: >
-        **Erster Sensor:** {{ first_sensor }} → {{ first_value }} W  
-        **Hausverbrauch:** {{ house_sensor }} → {{ house_value }} W  
-        **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }} W  
-        **Batterieentladung:** {{ battery_sensor }} → {{ battery_value }} W  
-        **Ladestationsleistung:** {{ charger_sensor }} → {{ charger_value }} W  
-        **Aktueller Ladestrom:** {{ charger_current_sensor }} → {{ charger_current_value }} A  
+        **Solar Power:** {{ !input solar_power }} → {{ solar_value }} W  
+        **Grid Feed:** {{ !input grid_feed }} → {{ grid_feed_value }} W  
+        **Home Consumption:** {{ !input home_consumption }} → {{ home_consumption_value }} W  
+        **Battery Charge/-discharge:** {{ !input battery_charge_discharge }} → {{ battery_value }} W  
+        **Charging Station Power:** {{ !input charging_station_power }} → {{ charger_power_value }} W  
+        **Charging Current:** {{ !input charging_current }} → {{ charger_current_value }} A  
 
-        **Minimaler Ladestrom (Slider):** {{ min_charger_current_value }} A  
-        **Maximaler Ladestrom (Slider):** {{ max_charger_current_value }} A  
+        **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
+        **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  
 
-        **Berechnung:** ({{ first_value }} - {{ second_value }} - {{ house_value }}) = **{{ result }}**
+        **Available Power for Charging:** {{ available_power }} W

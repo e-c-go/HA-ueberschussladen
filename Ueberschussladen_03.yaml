@@ -41,6 +41,7 @@ blueprint:
           step: 1
     min_feed_in_power:
       name: Mindest-Netzeinspeisung (W)
+      description: Mindest-Wert der Netzeinspeisung, bevor geladen wird
       default: 500
       selector:
         number:
@@ -51,6 +52,7 @@ blueprint:
           step: 50
     min_charge_power:
       name: Minimale Ladeleistung (W)
+      description: Mindest-Verfügbare Ladeleistung, damit die Ladung startet
       default: 1000
       selector:
         number:
@@ -59,13 +61,15 @@ blueprint:
           unit_of_measurement: "W"
           mode: slider
           step: 100
-        net_power:
+    net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
-      default: ""
+      default: null
       selector:
         entity:
           domain: sensor
           device_class: power
+          multiple: false
+          include_entities: []
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       default: false
@@ -73,18 +77,22 @@ blueprint:
         boolean:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
-      default: ""
+      default: null
       selector:
         entity:
           domain: sensor
           device_class: power
+          multiple: false
+          include_entities: []
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
-      default: ""
+      default: null
       selector:
         entity:
           domain: sensor
           device_class: power
+          multiple: false
+          include_entities: []
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
@@ -120,10 +128,11 @@ blueprint:
           domain: sensor
 
 variables:
-  min_feed_in: !input min_feed_in_power
-  min_charge: !input min_charge_power
-  max_current: !input max_charge_current
-  min_current: !input min_charge_current
+  min_feed_in: "{{ (states(!input min_feed_in_power) | float(0)) }}"  
+  min_charge: "{{ (states(!input min_charge_power) | float(0)) }}"
+  max_current: "{{ (!input max_charge_current | int) }}"
+  min_current: "{{ (!input min_charge_current | int) }}"
+  invert_net_value_fixed: "{{ -1 if (!input invert_net_value) else 1 }}"
 
 trigger:
   - platform: state
@@ -152,24 +161,30 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% if !input net_power != "" %}
-          {% set net_power = states(!input net_power | string) | float(0) %}
-          {% if is_state('!input invert_net_value', 'on') %}
-            {% set net_power = net_power * -1 %}
-          {% endif %}
+        {% set net_power = states(!input net_power) | float(0) if !input net_power else 0 %}
+        {% set net_export = states(!input net_export) | float(0) if !input net_export else 0 %}
+        {% set net_import = states(!input net_import) | float(0) if !input net_import else 0 %}
+        {% set house_consumption = states(!input house_consumption) | float(0) %}
+        {% set pv_power = states(!input pv_power) | float(0) %}
+        {% set conversion_factor = 219 %}
+
+        {# Falls die Netzeinspeisung invertiert werden soll #}
+        {% set net_power = net_power * invert_net_value_fixed %}
+
+        {# Berechnung der verfügbaren Energie #}
+        {% if net_power != 0 %}
           {% set available_power = net_power %}
-        {% elif !input net_export != "" and !input net_import != "" %}
-          {% set net_export = states(!input net_export | string) | float(0) %}
-          {% set net_import = states(!input net_import | string) | float(0) %}
+        {% elif net_export != 0 or net_import != 0 %}
           {% set available_power = net_export - net_import %}
         {% else %}
-          {% set available_power = states(!input pv_power | string) | float(0) - states(!input house_consumption | string) | float(0) %}
+          {% set available_power = pv_power - house_consumption %}
         {% endif %}
 
+        {# Lade-Entscheidung basierend auf Mindestbedingungen #}
         {% if available_power < min_feed_in or available_power < min_charge %}
           0  # Stoppt das Laden, wenn zu wenig Energie verfügbar ist
         {% else %}
-          {% set new_current = (available_power / 219) | round(0) %}
+          {% set new_current = (available_power / conversion_factor) | round(0) %}
           {% if new_current > max_current %}
             {{ max_current }}
           {% elif new_current < min_current %}

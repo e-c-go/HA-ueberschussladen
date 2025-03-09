@@ -78,7 +78,6 @@ blueprint:
         entity:
           domain: sensor
           device_class: power
-
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       default: ""

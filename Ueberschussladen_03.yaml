@@ -23,5 +23,6 @@ action:
     data:
       title: "DEBUG: PV-Leistung"
       message: >
-        **PV-Leistung (raw ID):** !input pv_power  
-        **PV-Leistung (Wert):** {{ states('!input pv_power') }}
+        **PV-Sensor-ID (direkt aus Input):** !input pv_power  
+        **PV-Leistung (Wert aus `states()`):** {{ states('!input pv_power') }}
+        **PV-Leistung (Wert aus `states()`):** {{ states.input pv_power') }}

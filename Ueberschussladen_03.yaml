@@ -122,7 +122,7 @@ blueprint:
           domain: sensor
 
 variables:
-  min_feed_in: "{{ !input min_feed_in_power | float(0) }}"
+  min_feed_in: "{{ !input min_feed_in_power | float(0) }}"  # ✅ Konvertiert korrekt
   min_charge: "{{ !input min_charge_power | float(0) }}"
   max_current: "{{ !input max_charge_current | int }}"
   min_current: "{{ !input min_charge_current | int }}"

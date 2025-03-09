@@ -62,12 +62,12 @@ blueprint:
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
       description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-          optional: true
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       default: false
@@ -76,21 +76,21 @@ blueprint:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
       description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-          optional: true
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
-          optional: true
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
@@ -193,4 +193,3 @@ action:
             {{ new_current }}
           {% endif %}
         {% endif %}
-

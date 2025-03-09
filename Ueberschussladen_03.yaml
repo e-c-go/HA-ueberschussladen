@@ -1,195 +1,27 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung (Fix für optionale Netzeinspeisung)
-  description: > 
-    Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
-    Ladung startet nur, wenn genügend Energie vorhanden ist.
-
+  name: Test PV-Leistung
+  description: >
+    Gibt die aktuelle PV-Leistung aus.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
 
   input:
-    min_charge_current:
-      name: Minimaler Ladestrom (A)
-      default: 6
-      selector:
-        number:
-          min: 0
-          max: 10
-          unit_of_measurement: "A"
-          mode: slider
-          step: 1
-    max_charge_current:
-      name: Maximaler Ladestrom (A)
-      default: 16
-      selector:
-        number:
-          min: 6
-          max: 32
-          unit_of_measurement: "A"
-          mode: slider
-          step: 1
-    min_battery_soc:
-      name: Minimaler Batterieladestand (%)
-      default: 20
-      selector:
-        number:
-          min: 0
-          max: 100
-          unit_of_measurement: "%"
-          mode: slider
-          step: 1
-    min_feed_in_power:
-      name: Mindest-Netzeinspeisung (W)
-      default: 500
-      selector:
-        number:
-          min: 0
-          max: 5000
-          unit_of_measurement: "W"
-          mode: slider
-          step: 50
-    min_charge_power:
-      name: Minimale Ladeleistung (W)
-      default: 1000
-      selector:
-        number:
-          min: 0
-          max: 11000
-          unit_of_measurement: "W"
-          mode: slider
-          step: 100
-    net_power:
-      name: Netzeinspeisung/-bezug (W) [Einzelwert]
-      description: Falls nicht genutzt, lasse dieses Feld leer.
-      default: ""
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-    invert_net_value:
-      name: Vorzeichen umkehren (nur für Einzelwert)
-      default: false
-      selector:
-        boolean:
-    net_export:
-      name: Netzeinspeisung (W) [Getrennte Werte]
-      description: Falls nicht genutzt, lasse dieses Feld leer.
-      default: ""
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-    net_import:
-      name: Netzbezug (W) [Getrennte Werte]
-      description: Falls nicht genutzt, lasse dieses Feld leer.
-      default: ""
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-    charger_power:
-      name: Aktuelle Ladeleistung (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-    charger_current:
-      name: Aktueller Ladestrom (A)
-      selector:
-        entity:
-          domain: number
-    automation_switch:
-      name: Automatisierungsschalter
-      selector:
-        entity:
-          domain: input_boolean
-    house_consumption:
-      name: Hausverbrauch (W)
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
     pv_power:
       name: PV-Leistung (W)
       selector:
         entity:
           domain: sensor
           device_class: power
-    charger_status:
-      name: Wallbox Status / Mode
-      selector:
-        entity:
-          domain: sensor
-
-variables:
-  min_feed_in: "{{ (!input min_feed_in_power) | float(0) }}"  
-  min_charge: "{{ (!input min_charge_power) | float(0) }}"
-  max_current: "{{ (!input max_charge_current) | int }}"
-  min_current: "{{ (!input min_charge_current) | int }}"
-  invert_net_value_fixed: "{{ -1 if (!input invert_net_value) else 1 }}"
 
 trigger:
-  - platform: state
-    entity_id: !input charger_status
-    to: "Waiting"
-  - platform: state
-    entity_id: !input charger_status
-    to: "Charging"
   - platform: time_pattern
     seconds: "/30"
 
-condition:
-  - condition: state
-    entity_id: !input automation_switch
-    state: "on"
-  - condition: numeric_state
-    entity_id: !input min_battery_soc
-    above: !input min_battery_soc
-  - condition: state
-    entity_id: !input charger_status
-    state: "Waiting"
-
 action:
-  - service: number.set_value
-    target:
-      entity_id: !input charger_current
+  - service: persistent_notification.create
     data:
-      value: >
-        {% set net_power = states(!input net_power) | float(0) if !input net_power else None %}
-        {% set net_export = states(!input net_export) | float(0) if !input net_export else None %}
-        {% set net_import = states(!input net_import) | float(0) if !input net_import else None %}
-        {% set house_consumption = states(!input house_consumption) | float(0) %}
-        {% set pv_power = states(!input pv_power) | float(0) %}
-        {% set conversion_factor = 219 %}
-
-        {# Falls Netzeinspeisung invertiert werden soll #}
-        {% if net_power is not none %}
-          {% set net_power = net_power * invert_net_value_fixed %}
-        {% endif %}
-
-        {# Bestimmung der verfügbaren Energie #}
-        {% if net_power is not none %}
-          {% set available_power = net_power %}
-        {% elif net_export is not none and net_import is not none %}
-          {% set available_power = net_export - net_import %}
-        {% else %}
-          {% set available_power = pv_power - house_consumption %}
-        {% endif %}
-
-        {# Lade-Entscheidung basierend auf Mindestbedingungen #}
-        {% if available_power < min_feed_in or available_power < min_charge %}
-          0  # Stoppt das Laden, wenn zu wenig Energie verfügbar ist
-        {% else %}
-          {% set new_current = (available_power / conversion_factor) | round(0) %}
-          {% if new_current > max_current %}
-            {{ max_current }}
-          {% elif new_current < min_current %}
-            {{ min_current }}
-          {% else %}
-            {{ new_current }}
-          {% endif %}
-        {% endif %}
+      title: "DEBUG: PV-Leistung"
+      message: >
+        **PV-Leistung (raw ID):** !input pv_power  
+        **PV-Leistung (Wert):** {{ states('!input pv_power') }}

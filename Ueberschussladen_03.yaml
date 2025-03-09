@@ -1,5 +1,5 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung (FINALER FIX)
+  name: Dynamische Wallbox-Ladesteuerung (Fix für optionale Netzeinspeisung)
   description: > 
     Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
     Ladung startet nur, wenn genügend Energie vorhanden ist.
@@ -41,7 +41,6 @@ blueprint:
           step: 1
     min_feed_in_power:
       name: Mindest-Netzeinspeisung (W)
-      description: Mindest-Wert der Netzeinspeisung, bevor geladen wird
       default: 500
       selector:
         number:
@@ -52,7 +51,6 @@ blueprint:
           step: 50
     min_charge_power:
       name: Minimale Ladeleistung (W)
-      description: Mindest-Verfügbare Ladeleistung, damit die Ladung startet
       default: 1000
       selector:
         number:
@@ -64,11 +62,14 @@ blueprint:
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
       description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
+          filter:
+            include_entities: []
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       default: false
@@ -77,19 +78,25 @@ blueprint:
     net_export:
       name: Netzeinspeisung (W) [Getrennte Werte]
       description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
+          filter:
+            include_entities: []
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
           multiple: false
+          filter:
+            include_entities: []
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
@@ -158,20 +165,22 @@ action:
       entity_id: !input charger_current
     data:
       value: >
-        {% set net_power = states(!input net_power) | float(0) if !input net_power else 0 %}
-        {% set net_export = states(!input net_export) | float(0) if !input net_export else 0 %}
-        {% set net_import = states(!input net_import) | float(0) if !input net_import else 0 %}
+        {% set net_power = states(!input net_power) | float(0) if !input net_power else None %}
+        {% set net_export = states(!input net_export) | float(0) if !input net_export else None %}
+        {% set net_import = states(!input net_import) | float(0) if !input net_import else None %}
         {% set house_consumption = states(!input house_consumption) | float(0) %}
         {% set pv_power = states(!input pv_power) | float(0) %}
         {% set conversion_factor = 219 %}
 
-        {# Falls die Netzeinspeisung invertiert werden soll #}
-        {% set net_power = net_power * invert_net_value_fixed %}
+        {# Falls Netzeinspeisung invertiert werden soll #}
+        {% if net_power is not none %}
+          {% set net_power = net_power * invert_net_value_fixed %}
+        {% endif %}
 
-        {# Berechnung der verfügbaren Energie #}
-        {% if net_power != 0 %}
+        {# Bestimmung der verfügbaren Energie #}
+        {% if net_power is not none %}
           {% set available_power = net_power %}
-        {% elif net_export != 0 or net_import != 0 %}
+        {% elif net_export is not none and net_import is not none %}
           {% set available_power = net_export - net_import %}
         {% else %}
           {% set available_power = pv_power - house_consumption %}

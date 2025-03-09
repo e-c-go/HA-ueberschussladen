@@ -17,9 +17,4 @@ action:
   - service: persistent_notification.create
     data:
       title: "Wallbox Debug"
-      message: >
-        {% if !input invert_net_value %}
-          invert_net_value: false
-        {% else %}
-          invert_net_value: true
-        {% endif %}
+      message: "{{ 'invert_net_value: true' if !input invert_net_value else 'invert_net_value: false' }}"

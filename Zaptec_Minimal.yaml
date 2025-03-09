@@ -52,11 +52,11 @@ action:
     data:
       title: "Ladezustand & Verfügbare Leistung"
       message: >
-        {% set pv_power = states(states('input.pv_power')) | float(0) %}
-        {% set house_consumption = states(states('input.house_consumption')) | float(0) %}
-        {% set battery_power = states(states('input.battery_power')) | float(0) %}
-        {% set net_power = states(states('input.net_power')) | float(0) %}
-        {% set battery_soc = states(states('input.battery_soc')) | float(0) %}
+        {% set pv_power = states(input.pv_power) | float(0) %}
+        {% set house_consumption = states(input.house_consumption) | float(0) %}
+        {% set battery_power = states(input.battery_power) | float(0) %}
+        {% set net_power = states(input.net_power) | float(0) %}
+        {% set battery_soc = states(input.battery_soc) | float(0) %}
 
         {% set available_power = pv_power + battery_power + net_power - house_consumption %}
 

@@ -9,10 +9,6 @@ blueprint:
       selector:
         boolean:
 
-variables:
-  invert_net_value_raw: !input invert_net_value
-  invert_net_value: "{{ 'true' if invert_net_value_raw else 'false' }}"
-
 trigger:
   - platform: homeassistant
     event: start
@@ -21,4 +17,9 @@ action:
   - service: persistent_notification.create
     data:
       title: "Wallbox Debug"
-      message: "invert_net_value: {{ invert_net_value }}"
+      message: >
+        {% if !input invert_net_value %}
+          invert_net_value: false
+        {% else %}
+          invert_net_value: true
+        {% endif %}

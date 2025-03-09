@@ -1,10 +1,10 @@
 blueprint:
-  name: Test Berechnung mit vier Sensoren
+  name: Test Berechnung mit fünf Sensoren
   description: >
-    Wählt vier Sensoren aus:
+    Wählt fünf Sensoren aus:
     - Multipliziert den ersten Wert mit 1000
     - Zieht den zweiten Wert ab
-    - Zeigt die Batterieentladung und die Ladestationsleistung an
+    - Zeigt den Hausverbrauch, die Batterieentladung und die Ladestationsleistung an
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
@@ -16,8 +16,14 @@ blueprint:
         entity:
           domain: sensor
           device_class: power
+    sensor_house_consumption:
+      name: Hausverbrauch (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
     sensor_2:
-      name: Zweiter Sensor (wird abgezogen)
+      name: Zweiter Sensor (z. B. Netzbezug/-einspeisung, wird abgezogen)
       selector:
         entity:
           domain: sensor
@@ -37,16 +43,18 @@ blueprint:
 
 variables:
   first_sensor: !input sensor_1
+  house_sensor: !input sensor_house_consumption
   second_sensor: !input sensor_2
   battery_sensor: !input sensor_battery
   charger_sensor: !input sensor_charger
 
   first_value: "{{ states(first_sensor) | float(0) * 1000 }}"
+  house_value: "{{ states(house_sensor) | float(0) }}"
   second_value: "{{ states(second_sensor) | float(0) }}"
   battery_value: "{{ states(battery_sensor) | float(0) }}"
   charger_value: "{{ states(charger_sensor) | float(0) }}"
 
-  result: "{{ first_value - second_value }}"
+  result: "{{ first_value - second_value - house_value }}"
 
 trigger:
   - platform: time_pattern
@@ -55,11 +63,12 @@ trigger:
 action:
   - service: persistent_notification.create
     data:
-      title: "DEBUG: Berechnung mit Batterie & Ladestation"
+      title: "DEBUG: Berechnung mit Hausverbrauch"
       message: >
         **Erster Sensor:** {{ first_sensor }} → {{ first_value }}  
+        **Hausverbrauch:** {{ house_sensor }} → {{ house_value }}  
         **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }}  
         **Batterieentladung:** {{ battery_sensor }} → {{ battery_value }}  
         **Ladestationsleistung:** {{ charger_sensor }} → {{ charger_value }}  
 
-        **Berechnung:** ({{ first_value }} - {{ second_value }}) = **{{ result }}**
+        **Berechnung:** ({{ first_value }} - {{ second_value }} - {{ house_value }}) = **{{ result }}**

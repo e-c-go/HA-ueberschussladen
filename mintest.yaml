@@ -1,33 +1,39 @@
 blueprint:
-  name: Debug Wallbox-Steuerung (FIXED)
-  description: Test für die Wallbox-Automatisierung mit funktionierendem Template
+  name: Test Berechnung mit zwei Sensoren
+  description: >
+    Wählt zwei beliebige Sensoren aus, multipliziert den ersten mit 1000 und zieht den zweiten davon ab.
   domain: automation
+  homeassistant:
+    min_version: "2023.12.0"
+
   input:
-    invert_net_value:
-      name: Vorzeichen umkehren (nur für Einzelwert)
-      default: false
+    sensor_1:
+      name: Erster Sensor (wird mit 1000 multipliziert)
       selector:
-        boolean:
+        entity:
+          domain: sensor
+    sensor_2:
+      name: Zweiter Sensor (wird abgezogen)
+      selector:
+        entity:
+          domain: sensor
 
 variables:
-  invert_net_value_fixed: !input invert_net_value  # Speichert den Wert zuerst in einer Variablen
+  first_sensor: !input sensor_1
+  second_sensor: !input sensor_2
+  first_value: "{{ states(first_sensor) | float(0) * 1000 }}"
+  second_value: "{{ states(second_sensor) | float(0) }}"
+  result: "{{ first_value - second_value }}"
 
 trigger:
-  - platform: homeassistant
-    event: start
+  - platform: time_pattern
+    seconds: "/30"
 
 action:
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ invert_net_value_fixed }}"
-        sequence:
-          - service: persistent_notification.create
-            data:
-              title: "Wallbox Debug"
-              message: "Vorzeichen invertiert: JA"
-    default:
-      - service: persistent_notification.create
-        data:
-          title: "Wallbox Debug"
-          message: "Vorzeichen invertiert: NEIN"
+  - service: persistent_notification.create
+    data:
+      title: "DEBUG: Berechnung"
+      message: >
+        **Erster Sensor:** {{ first_sensor }} → {{ first_value }}  
+        **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }}  
+        **Berechnung:** ({{ first_value }} - {{ second_value }}) = **{{ result }}**

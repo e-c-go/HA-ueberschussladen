@@ -8,22 +8,22 @@ blueprint:
 
   input:
     sensor_1:
-      name: Erster Sensor (wird mit 1000 multipliziert)
+      name: Solarerzeugung in KW
       selector:
         entity:
           domain: sensor
     sensor_2:
-      name: Zweiter Sensor (wird abgezogen)
+      name: Netzbezug in W
       selector:
         entity:
           domain: sensor
 
 variables:
-  first_sensor: !input sensor_1
-  second_sensor: !input sensor_2
-  first_value: "{{ states(first_sensor) | float(0) * 1000 }}"
-  second_value: "{{ states(second_sensor) | float(0) * 1000 }}"
-  result: "{{ first_value - second_value }}"
+  var_solar_power: !input solar_power 
+  var_grid_power: !input grid_power
+  var_solar_power: "{{ states(var_solar_power) | float(0) * 1000 }}"
+  var_grid_power: "{{ states(var_grid_power) | float(0) * 1000 }}"
+  result: "{{ var_solar_power - var_grid_power }}"
 
 trigger:
   - platform: time_pattern
@@ -34,8 +34,6 @@ action:
     data:
       title: "DEBUG: Berechnung"
       message: >
-        **Erster Sensor:** {{ first_sensor }} → {{ first_value }}  
-        **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }}  
-        **Berechnung:** ({{ first_value }} - {{ second_value }}) = **{{ result }}**
-
-        
+        **Erster Sensor:** {{ var_solar_power }} → {{ first_value }}  
+        **Zweiter Sensor:** {{ var_grid_power }} → {{ var_grid_power }}  
+        **Berechnung:** ({{ var_solar_power }} - {{ var_grid_power }}) = **{{ result }}**

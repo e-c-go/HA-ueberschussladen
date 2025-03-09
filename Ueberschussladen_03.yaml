@@ -156,7 +156,8 @@ variables:
   pv_power_entity: !input pv_power
   battery_soc_entity: !input battery_soc
   invert_net_value_entity: !input invert_net_value
-  invert_net_value: "{{ 1 if is_state(invert_net_value_entity, 'on') else 0 }}"
+  invert_net_value: "{{ 'true' if is_state(invert_net_value_entity, 'on') else 'false' }}"
+
 
   net_power: "{{ states(net_power_entity) | float(0) if net_power_entity != 'None' else 0 }}"
   net_export: "{{ states(net_export_entity) | float(0) if net_export_entity != 'None' else 0 }}"
@@ -170,7 +171,7 @@ variables:
   conversion_factor: 219
 
   adjusted_net_power: >-
-  {% if invert_net_value == 1 %}
+  {% if invert_net_value == 'true' %}
     {{ net_power * -1 }}
   {% else %}
     {{ net_power }}

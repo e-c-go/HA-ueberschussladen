@@ -62,12 +62,19 @@ blueprint:
           mode: slider
 
 variables:
-  solar_value: "{{ states(!input solar_power) | float(0) * 1000 }}"  # Umrechnung kW → W
-  grid_feed_value: "{{ states(!input grid_feed) | float(0) }}"
-  home_consumption_value: "{{ states(!input home_consumption) | float(0) }}"
-  battery_value: "{{ states(!input battery_charge_discharge) | float(0) * 1000 }}"  # Umrechnung kW → W
-  charger_power_value: "{{ states(!input charging_station_power) | float(0) * 1000 }}"  # Umrechnung kW → W
-  charger_current_value: "{{ states(!input charging_current) | float(0) }}"
+  solar_sensor: !input solar_power
+  grid_feed_sensor: !input grid_feed
+  home_consumption_sensor: !input home_consumption
+  battery_sensor: !input battery_charge_discharge
+  charger_power_sensor: !input charging_station_power
+  charger_current_sensor: !input charging_current
+
+  solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
+  grid_feed_value: "{{ states(grid_feed_sensor) | float(0) }}"
+  home_consumption_value: "{{ states(home_consumption_sensor) | float(0) }}"
+  battery_value: "{{ states(battery_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
+  charger_power_value: "{{ states(charger_power_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
+  charger_current_value: "{{ states(charger_current_sensor) | float(0) }}"
   
   min_charger_current_value: !input min_charging_current
   max_charger_current_value: !input max_charging_current
@@ -83,12 +90,12 @@ action:
     data:
       title: "Solar- & Ladeleistungsberechnung"
       message: >
-        **Solar Power:** {{ !input solar_power }} → {{ solar_value }} W  
-        **Grid Feed:** {{ !input grid_feed }} → {{ grid_feed_value }} W  
-        **Home Consumption:** {{ !input home_consumption }} → {{ home_consumption_value }} W  
-        **Battery Charge/-discharge:** {{ !input battery_charge_discharge }} → {{ battery_value }} W  
-        **Charging Station Power:** {{ !input charging_station_power }} → {{ charger_power_value }} W  
-        **Charging Current:** {{ !input charging_current }} → {{ charger_current_value }} A  
+        **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
+        **Grid Feed:** {{ grid_feed_sensor }} → {{ grid_feed_value }} W  
+        **Home Consumption:** {{ home_consumption_sensor }} → {{ home_consumption_value }} W  
+        **Battery Charge/-discharge:** {{ battery_sensor }} → {{ battery_value }} W  
+        **Charging Station Power:** {{ charger_power_sensor }} → {{ charger_power_value }} W  
+        **Charging Current:** {{ charger_current_sensor }} → {{ charger_current_value }} A  
 
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
         **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  

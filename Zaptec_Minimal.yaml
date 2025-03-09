@@ -50,15 +50,22 @@ trigger:
 action:
   - service: persistent_notification.create
     data:
-      title: "Ladezustand & Verfügbare Leistung"
+      title: "DEBUG: Sensorwerte"
       message: >
-        {% set pv_power = states(this.pv_power) | float(0) %}
-        {% set house_consumption = states(this.house_consumption) | float(0) %}
-        {% set battery_power = states(this.battery_power) | float(0) %}
-        {% set net_power = states(this.net_power) | float(0) %}
-        {% set battery_soc = states(this.battery_soc) | float(0) %}
+        **Überprüfe, ob alle Entitäts-IDs korrekt übergeben wurden:**
+        
+        - `pv_power`: {{ input.pv_power }}
+        - `house_consumption`: {{ input.house_consumption }}
+        - `battery_power`: {{ input.battery_power }}
+        - `net_power`: {{ input.net_power }}
+        - `battery_soc`: {{ input.battery_soc }}
 
-        {% set available_power = pv_power + battery_power + net_power - house_consumption %}
+        **Werte aus states():**
+        
+        - `pv_power`: {{ states(input.pv_power) }}
+        - `house_consumption`: {{ states(input.house_consumption) }}
+        - `battery_power`: {{ states(input.battery_power) }}
+        - `net_power`: {{ states(input.net_power) }}
+        - `battery_soc`: {{ states(input.battery_soc) }}
 
-        Batteriestand: {{ battery_soc }}%  
-        Verfügbare Ladeleistung: {{ available_power }} W
+        Falls hier "unknown" oder "none" steht, prüfe, ob die Sensoren in den Blueprint-Inputs richtig ausgewählt wurden!

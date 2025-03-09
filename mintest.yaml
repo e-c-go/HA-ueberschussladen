@@ -1,6 +1,6 @@
 blueprint:
-  name: Debug Wallbox-Steuerung
-  description: Test für die Wallbox-Automatisierung mit Debugging
+  name: Debug Wallbox-Steuerung (Getestet)
+  description: Test für die Wallbox-Automatisierung mit sicherer Template-Nutzung
   domain: automation
   input:
     invert_net_value:
@@ -17,4 +17,5 @@ action:
   - service: persistent_notification.create
     data:
       title: "Wallbox Debug"
-      message: "{{ 'invert_net_value: true' if !input invert_net_value else 'invert_net_value: false' }}"
+      message: >-
+        Vorzeichen invertiert: {% if is_boolean(!input invert_net_value) and !input invert_net_value %} Ja {% else %} Nein {% endif %}

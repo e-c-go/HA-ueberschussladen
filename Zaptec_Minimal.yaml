@@ -22,7 +22,7 @@ variables:
   first_sensor: !input sensor_1
   second_sensor: !input sensor_2
   first_value: "{{ states(first_sensor) | float(0) * 1000 }}"
-  second_value: "{{ states(second_sensor) | float(0) }}"
+  second_value: "{{ states(second_sensor) | float(0) * 1000 }}"
   result: "{{ first_value - second_value }}"
 
 trigger:

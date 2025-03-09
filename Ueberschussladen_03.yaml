@@ -122,11 +122,11 @@ blueprint:
           domain: sensor
 
 variables:
-  invert_net_value_fixed: !input invert_net_value
-  min_current: !input min_charge_current
-  max_current: !input max_charge_current
-  min_feed_in: !input min_feed_in_power  # ✅ Fix für int-Fehler
-  min_charge: !input min_charge_power  # ✅ Fix für int-Fehler
+  min_feed_in: "{{ !input min_feed_in_power | float(0) }}"
+  min_charge: "{{ !input min_charge_power | float(0) }}"
+  max_current: "{{ !input max_charge_current | int }}"
+  min_current: "{{ !input min_charge_current | int }}"
+
 
 trigger:
   - platform: state

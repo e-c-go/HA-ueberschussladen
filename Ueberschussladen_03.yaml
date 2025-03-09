@@ -1,11 +1,13 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung (FIXED)
+  name: Dynamische Wallbox-Ladesteuerung (FIXED mit min. Einspeisung & min. Ladeleistung)
   description: > 
     Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
-    Du kannst entweder eine einzelne Netzeinspeisungs-Entität oder getrennte Werte für Bezug & Einspeisung eingeben.
+    Ladung startet nur, wenn genügend Energie vorhanden ist.
+
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
+
   input:
     min_charge_current:
       name: Minimaler Ladestrom (A)
@@ -37,6 +39,28 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
           step: 1
+    min_feed_in_power:
+      name: Mindest-Netzeinspeisung (W)
+      description: Mindest-Wert der Netzeinspeisung, bevor geladen wird
+      default: 500
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: "W"
+          mode: slider
+          step: 50
+    min_charge_power:
+      name: Minimale Ladeleistung (W)
+      description: Mindest-Verfügbare Ladeleistung, damit die Ladung startet
+      default: 1000
+      selector:
+        number:
+          min: 0
+          max: 11000
+          unit_of_measurement: "W"
+          mode: slider
+          step: 100
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
       description: Falls nicht genutzt, lasse dieses Feld leer.
@@ -107,9 +131,11 @@ blueprint:
           multiple: false
 
 variables:
-  invert_net_value_fixed: !input invert_net_value  # Fix: Speichert das `!input`-Wert korrekt
+  invert_net_value_fixed: !input invert_net_value
   min_current: !input min_charge_current
   max_current: !input max_charge_current
+  min_feed_in: !input min_feed_in_power
+  min_charge: !input min_charge_power
 
 trigger:
   - platform: state
@@ -133,21 +159,6 @@ condition:
     state: "Waiting"
 
 action:
-  - choose:
-      - conditions:
-          - condition: template
-            value_template: "{{ invert_net_value_fixed }}"  # Fix: Kein `!input` in Templates
-        sequence:
-          - service: persistent_notification.create
-            data:
-              title: "Wallbox Debug"
-              message: "Vorzeichen invertiert: JA"
-    default:
-      - service: persistent_notification.create
-        data:
-          title: "Wallbox Debug"
-          message: "Vorzeichen invertiert: NEIN"
-
   - service: number.set_value
     target:
       entity_id: !input charger_current
@@ -170,12 +181,15 @@ action:
           {% set available_power = pv_power - house_consumption %}
         {% endif %}
 
-        {% set new_current = (available_power / conversion_factor) | round(0) %}
-
-        {% if new_current > max_current %}
-          {{ max_current }}
-        {% elif new_current < min_current %}
-          {{ min_current }}
+        {% if available_power < min_feed_in or available_power < min_charge %}
+          0  # Stoppt das Laden, wenn zu wenig Energie verfügbar ist
         {% else %}
-          {{ new_current }}
+          {% set new_current = (available_power / conversion_factor) | round(0) %}
+          {% if new_current > max_current %}
+            {{ max_current }}
+          {% elif new_current < min_current %}
+            {{ min_current }}
+          {% else %}
+            {{ new_current }}
+          {% endif %}
         {% endif %}

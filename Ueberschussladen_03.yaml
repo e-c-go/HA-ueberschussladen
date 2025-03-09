@@ -1,9 +1,8 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung
+  name: Dynamische Wallbox-Ladesteuerung (FIXED)
   description: > 
     Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
-    Die Wallbox wird auf 0A gesetzt, wenn der Batteriestand zu niedrig oder der Netzbezug zu hoch ist.
-    Neu: Die Ladung startet erst, wenn Netzeinspeisung + Batterieladeleistung eine Mindestleistung überschreiten.
+    Du kannst entweder eine einzelne Netzeinspeisungs-Entität oder getrennte Werte für Bezug & Einspeisung eingeben.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
@@ -28,41 +27,6 @@ blueprint:
           unit_of_measurement: "A"
           mode: slider
           step: 1
-    charger_current:
-      name: Aktueller Ladestrom (A)
-      selector:
-        entity:
-          domain: number
-          multiple: false
-    net_power:
-      name: Netzeinspeisung/-bezug (W) [Einzelwert]
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-      default: null
-    invert_net_value:
-      name: Vorzeichen umkehren (nur für Einzelwert)
-      default: false
-      selector:
-        boolean:
-    net_export:
-      name: Netzeinspeisung (W) [Getrennte Werte]
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-      default: null
-    net_import:
-      name: Netzbezug (W) [Getrennte Werte]
-      selector:
-        entity:
-          domain: sensor
-          device_class: power
-          multiple: false
-      default: null
     min_battery_soc:
       name: Minimaler Batterieladestand (%)
       default: 20
@@ -73,15 +37,51 @@ blueprint:
           unit_of_measurement: "%"
           mode: slider
           step: 1
-    battery_soc:
-      name: Aktueller Batteriestand (%)
+    net_power:
+      name: Netzeinspeisung/-bezug (W) [Einzelwert]
+      description: Falls nicht genutzt, lasse dieses Feld leer.
+      default: ""
       selector:
         entity:
           domain: sensor
-          device_class: battery
+          device_class: power
+          multiple: false
+    invert_net_value:
+      name: Vorzeichen umkehren (nur für Einzelwert)
+      default: false
+      selector:
+        boolean:
+    net_export:
+      name: Netzeinspeisung (W) [Getrennte Werte]
+      default: ""
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    net_import:
+      name: Netzbezug (W) [Getrennte Werte]
+      default: ""
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    charger_power:
+      name: Aktuelle Ladeleistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+          multiple: false
+    charger_current:
+      name: Aktueller Ladestrom (A)
+      selector:
+        entity:
+          domain: number
           multiple: false
     automation_switch:
-      name: Automatisierungsschalter (Überschussladen)
+      name: Automatisierungsschalter
       selector:
         entity:
           domain: input_boolean
@@ -105,111 +105,77 @@ blueprint:
         entity:
           domain: sensor
           multiple: false
-    min_feed_in_power:
-      name: Mindest-Netzeinspeisung (W) für das Laden
-      default: 500
-      selector:
-        number:
-          min: 0
-          max: 2000
-          unit_of_measurement: "W"
-          mode: slider
-          step: 50
-    min_start_power:
-      name: Mindest-Gesamtleistung für Ladestart (W)
-      default: 1500
-      selector:
-        number:
-          min: 500
-          max: 5000
-          unit_of_measurement: "W"
-          mode: box
-          step: 100
+
+variables:
+  invert_net_value_fixed: !input invert_net_value  # Fix: Speichert das `!input`-Wert korrekt
+  min_current: !input min_charge_current
+  max_current: !input max_charge_current
 
 trigger:
   - platform: state
     entity_id: !input charger_status
     to: "Waiting"
-    from: "Not Charging"  # Triggert auch, wenn vorher ein anderer Modus war.
   - platform: state
     entity_id: !input charger_status
     to: "Charging"
-    from: "Waiting"
-  - platform: state
-    entity_id: !input charger_status
-    to: "Charging"
-    from: "Not Charging"
   - platform: time_pattern
     seconds: "/30"
-
-variables:
-  min_current: !input min_charge_current
-  max_current: !input max_charge_current
-  min_battery_soc_value: !input min_battery_soc
-  min_feed_in_power: !input min_feed_in_power
-  min_start_power: !input min_start_power
-
-  net_power_entity: !input net_power
-  net_export_entity: !input net_export
-  net_import_entity: !input net_import
-  house_consumption_entity: !input house_consumption
-  pv_power_entity: !input pv_power
-  battery_soc_entity: !input battery_soc
-  invert_net_value: "{{ 'true' if !input invert_net_value else 'false' }}"
-
-
-
-  net_power: "{{ states(net_power_entity) | float(0) if net_power_entity != 'None' else 0 }}"
-  net_export: "{{ states(net_export_entity) | float(0) if net_export_entity != 'None' else 0 }}"
-  net_import: "{{ states(net_import_entity) | float(0) if net_import_entity != 'None' else 0 }}"
-  house_consumption: "{{ states(house_consumption_entity) | float(0) if house_consumption_entity != 'None' else 0 }}"
-  pv_power: "{{ states(pv_power_entity) | float(0) if pv_power_entity != 'None' else 0 }}"
-  battery_soc: "{{ states(battery_soc_entity) | float(0) if battery_soc_entity != 'None' else 0 }}"
-
-  battery_charge_power: "{{ states('sensor.battery_charge_power') | float(0) }}"
-
-  conversion_factor: 219
-
-  adjusted_net_power: "{{ (net_power * -1) if invert_net_value == 'true' else net_power }}"
-
-  available_power: >-
-    {% if net_power_entity %}
-      {{ adjusted_net_power }}
-    {% elif net_export_entity and net_import_entity %}
-      {{ net_export - net_import }}
-    {% else %}
-      {{ pv_power - house_consumption }}
-    {% endif %}
-
-  available_total_power: "{{ available_power + battery_charge_power }}"
-
-  new_current: "{{ (available_total_power / conversion_factor) | round(0) }}"
-
-  final_current: >-
-    {% if battery_soc < min_battery_soc_value or available_power < min_feed_in_power %}
-      0
-    {% elif available_total_power < min_start_power %}
-      0
-    {% elif new_current > max_current %}
-      {{ max_current }}
-    {% elif new_current < min_current %}
-      {{ min_current }}
-    {% else %}
-      {{ new_current }}
-    {% endif %}
 
 condition:
   - condition: state
     entity_id: !input automation_switch
     state: "on"
+  - condition: numeric_state
+    entity_id: !input min_battery_soc
+    above: !input min_battery_soc
+  - condition: state
+    entity_id: !input charger_status
+    state: "Waiting"
 
 action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ invert_net_value_fixed }}"  # Fix: Kein `!input` in Templates
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Wallbox Debug"
+              message: "Vorzeichen invertiert: JA"
+    default:
+      - service: persistent_notification.create
+        data:
+          title: "Wallbox Debug"
+          message: "Vorzeichen invertiert: NEIN"
+
   - service: number.set_value
     target:
       entity_id: !input charger_current
     data:
-      value: "{{ final_current }}"
-  - service: persistent_notification.create
-    data:
-      title: "Wallbox Ladung angepasst"
-      message: "Neuer Ladestrom: {{ final_current }}A"
+      value: >
+        {% set net_power = states(!input net_power) | float(0) %}
+        {% set net_export = states(!input net_export) | float(0) %}
+        {% set net_import = states(!input net_import) | float(0) %}
+        {% set house_consumption = states(!input house_consumption) | float(0) %}
+        {% set pv_power = states(!input pv_power) | float(0) %}
+        {% set conversion_factor = 219 %}
+
+        {% if invert_net_value_fixed %}
+          {% set net_power = net_power * -1 %}
+        {% endif %}
+
+        {% if net_export != 0 or net_import != 0 %}
+          {% set available_power = net_export - net_import %}
+        {% else %}
+          {% set available_power = pv_power - house_consumption %}
+        {% endif %}
+
+        {% set new_current = (available_power / conversion_factor) | round(0) %}
+
+        {% if new_current > max_current %}
+          {{ max_current }}
+        {% elif new_current < min_current %}
+          {{ min_current }}
+        {% else %}
+          {{ new_current }}
+        {% endif %}

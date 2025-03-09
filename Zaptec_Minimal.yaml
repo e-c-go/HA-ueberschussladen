@@ -1,29 +1,52 @@
 blueprint:
-  name: Test Berechnung mit zwei Sensoren
+  name: Test Berechnung mit vier Sensoren
   description: >
-    Wählt zwei beliebige Sensoren aus, multipliziert den ersten mit 1000 und zieht den zweiten davon ab.
+    Wählt vier Sensoren aus:
+    - Multipliziert den ersten Wert mit 1000
+    - Zieht den zweiten Wert ab
+    - Zeigt die Batterieentladung und die Ladestationsleistung an
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
 
   input:
     sensor_1:
-      name: Solarerzeugung in KW
+      name: Erster Sensor (wird mit 1000 multipliziert)
       selector:
         entity:
           domain: sensor
+          device_class: power
     sensor_2:
-      name: Netzbezug in W
+      name: Zweiter Sensor (wird abgezogen)
       selector:
         entity:
           domain: sensor
+          device_class: power
+    sensor_battery:
+      name: Batterieentladung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    sensor_charger:
+      name: Ladestationsleistung (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
 
 variables:
-  var_solar_power: !input solar_power 
-  var_grid_power: !input grid_power
-  var_solar_power: "{{ states(var_solar_power) | float(0) * 1000 }}"
-  var_grid_power: "{{ states(var_grid_power) | float(0) * 1000 }}"
-  result: "{{ var_solar_power - var_grid_power }}"
+  first_sensor: !input sensor_1
+  second_sensor: !input sensor_2
+  battery_sensor: !input sensor_battery
+  charger_sensor: !input sensor_charger
+
+  first_value: "{{ states(first_sensor) | float(0) * 1000 }}"
+  second_value: "{{ states(second_sensor) | float(0) }}"
+  battery_value: "{{ states(battery_sensor) | float(0) }}"
+  charger_value: "{{ states(charger_sensor) | float(0) }}"
+
+  result: "{{ first_value - second_value }}"
 
 trigger:
   - platform: time_pattern
@@ -32,8 +55,11 @@ trigger:
 action:
   - service: persistent_notification.create
     data:
-      title: "DEBUG: Berechnung"
+      title: "DEBUG: Berechnung mit Batterie & Ladestation"
       message: >
-        **Erster Sensor:** {{ var_solar_power }} → {{ first_value }}  
-        **Zweiter Sensor:** {{ var_grid_power }} → {{ var_grid_power }}  
-        **Berechnung:** ({{ var_solar_power }} - {{ var_grid_power }}) = **{{ result }}**
+        **Erster Sensor:** {{ first_sensor }} → {{ first_value }}  
+        **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }}  
+        **Batterieentladung:** {{ battery_sensor }} → {{ battery_value }}  
+        **Ladestationsleistung:** {{ charger_sensor }} → {{ charger_value }}  
+
+        **Berechnung:** ({{ first_value }} - {{ second_value }}) = **{{ result }}**

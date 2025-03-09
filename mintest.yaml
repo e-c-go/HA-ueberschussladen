@@ -22,7 +22,96 @@ blueprint:
       selector:
         entity:
           domain: sensor
+          device_class: powerblueprint:
+  name: Solar- und Ladeleistungsberechnung
+  description: >
+    Berechnet die verfügbare Ladeleistung basierend auf Solarleistung, Netzbezug, Hausverbrauch und Batterie.
+    Zeigt zusätzlich die aktuelle Ladeleistung und Ladestromgrenzen aus einer Entität an.
+  domain: automation
+  homeassistant:
+    min_version: "2023.12.0"
+
+  input:
+    solar_power:
+      name: Solar Power (kW)
+      selector:
+        entity:
+          domain: sensor
           device_class: power
+    grid_feed:
+      name: Grid Feed (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    home_consumption:
+      name: Home Consumption (W)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    battery_charge_discharge:
+      name: Battery Charge/-discharge (kW)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    charging_station_power:
+      name: Charging Station Power (kW)
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    charging_current:
+      name: Charging Current (A)
+      selector:
+        entity:
+          domain: sensor
+          device_class: current
+    min_charging_current:
+      name: Minimal Charging Current (A) - from entity
+      selector:
+        entity:
+          domain: number
+    max_charging_current:
+      name: Maximal Charging Current (A) - from entity
+      selector:
+        entity:
+          domain: number
+
+variables:
+  solar_value: "{{ states(!input solar_power) | float(0) * 1000 }}"  # Umrechnung kW → W
+  grid_feed_value: "{{ states(!input grid_feed) | float(0) }}"
+  home_consumption_value: "{{ states(!input home_consumption) | float(0) }}"
+  battery_value: "{{ states(!input battery_charge_discharge) | float(0) * 1000 }}"  # Umrechnung kW → W
+  charger_power_value: "{{ states(!input charging_station_power) | float(0) * 1000 }}"  # Umrechnung kW → W
+  charger_current_value: "{{ states(!input charging_current) | float(0) }}"
+  min_charger_current_value: "{{ states(!input min_charging_current) | float(0) }}"
+  max_charger_current_value: "{{ states(!input max_charging_current) | float(0) }}"
+
+  available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
+
+trigger:
+  - platform: time_pattern
+    seconds: "/30"
+
+action:
+  - service: persistent_notification.create
+    data:
+      title: "Solar- & Ladeleistungsberechnung"
+      message: >
+        **Solar Power:** {{ !input solar_power }} → {{ solar_value }} W  
+        **Grid Feed:** {{ !input grid_feed }} → {{ grid_feed_value }} W  
+        **Home Consumption:** {{ !input home_consumption }} → {{ home_consumption_value }} W  
+        **Battery Charge/-discharge:** {{ !input battery_charge_discharge }} → {{ battery_value }} W  
+        **Charging Station Power:** {{ !input charging_station_power }} → {{ charger_power_value }} W  
+        **Charging Current:** {{ !input charging_current }} → {{ charger_current_value }} A  
+
+        **Minimal Charging Current (from entity):** {{ !input min_charging_current }} → {{ min_charger_current_value }} A  
+        **Maximal Charging Current (from entity):** {{ !input max_charging_current }} → {{ max_charger_current_value }} A  
+
+        **Available Power for Charging:** {{ available_power }} W
+
     sensor_2:
       name: Zweiter Sensor (z. B. Netzbezug/-einspeisung, wird abgezogen)
       selector:

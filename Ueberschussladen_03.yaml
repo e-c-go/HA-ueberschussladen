@@ -1,5 +1,5 @@
 blueprint:
-  name: Dynamische Wallbox-Ladesteuerung (FIXED mit min. Einspeisung & min. Ladeleistung)
+  name: Dynamische Wallbox-Ladesteuerung (FINALER FIX)
   description: > 
     Automatische Anpassung des Ladestroms basierend auf PV-Überschuss, Batteriestatus und Netzbezug.
     Ladung startet nur, wenn genügend Energie vorhanden ist.
@@ -63,13 +63,11 @@ blueprint:
           step: 100
     net_power:
       name: Netzeinspeisung/-bezug (W) [Einzelwert]
-      description: Falls nicht genutzt, lasse dieses Feld leer.
       default: ""
       selector:
         entity:
           domain: sensor
           device_class: power
-          multiple: false
     invert_net_value:
       name: Vorzeichen umkehren (nur für Einzelwert)
       default: false
@@ -82,7 +80,6 @@ blueprint:
         entity:
           domain: sensor
           device_class: power
-          multiple: false
     net_import:
       name: Netzbezug (W) [Getrennte Werte]
       default: ""
@@ -90,20 +87,17 @@ blueprint:
         entity:
           domain: sensor
           device_class: power
-          multiple: false
     charger_power:
       name: Aktuelle Ladeleistung (W)
       selector:
         entity:
           domain: sensor
           device_class: power
-          multiple: false
     charger_current:
       name: Aktueller Ladestrom (A)
       selector:
         entity:
           domain: number
-          multiple: false
     automation_switch:
       name: Automatisierungsschalter
       selector:
@@ -115,27 +109,24 @@ blueprint:
         entity:
           domain: sensor
           device_class: power
-          multiple: false
     pv_power:
       name: PV-Leistung (W)
       selector:
         entity:
           domain: sensor
           device_class: power
-          multiple: false
     charger_status:
       name: Wallbox Status / Mode
       selector:
         entity:
           domain: sensor
-          multiple: false
 
 variables:
   invert_net_value_fixed: !input invert_net_value
   min_current: !input min_charge_current
   max_current: !input max_charge_current
-  min_feed_in: "{{ !input min_feed_in_power | float(0) }}"  # Fix: Zahl erzwingen
-  min_charge: "{{ !input min_charge_power | float(0) }}"  # Fix: Zahl erzwingen
+  min_feed_in: !input min_feed_in_power  # ✅ Zahlenwerte direkt speichern
+  min_charge: !input min_charge_power  # ✅ Zahlenwerte direkt speichern
 
 trigger:
   - platform: state

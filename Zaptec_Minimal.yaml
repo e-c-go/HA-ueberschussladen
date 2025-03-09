@@ -65,23 +65,21 @@ action:
         {% set house_consumption = states(!input house_consumption) | float(0) %}
         {% set net_power = states(!input net_power) | float(0) if !input net_power else None %}
         {% set conversion_factor = 219 %}
-
-        {# Falls Netzeinspeisung verfügbar ist, diese nutzen, sonst PV-Überschuss #}
+        
         {% if net_power is not none %}
           {% set available_power = net_power %}
         {% else %}
           {% set available_power = pv_power - house_consumption %}
         {% endif %}
-
-        {# Ladestrom berechnen #}
+        
         {% set new_current = (available_power / conversion_factor) | round(0) %}
-        {% set min_current = !input min_charge_current | int %}
-        {% set max_current = !input max_charge_current | int %}
-
+        {% set min_current = (!input min_charge_current) | int %}
+        {% set max_current = (!input max_charge_current) | int %}
+        
         {% if new_current > max_current %}
-          {{ max_current }}
+          {{ max_current | string }}
         {% elif new_current < min_current %}
-          {{ min_current }}
+          {{ min_current | string }}
         {% else %}
-          {{ new_current }}
+          {{ new_current | string }}
         {% endif %}

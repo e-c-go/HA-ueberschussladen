@@ -170,7 +170,7 @@ variables:
 
   conversion_factor: 219
 
-  while scanning for the next token found character '%' that cannot start any token in "<unicode string>", line 174, column 4: {% if invert_net_value == 'true' %} ^
+  adjusted_net_power: "{{ (net_power * -1) if invert_net_value == 'true' else net_power }}"
 
   available_power: >-
     {% if net_power_entity %}

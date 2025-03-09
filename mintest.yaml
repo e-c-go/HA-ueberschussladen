@@ -10,7 +10,8 @@ blueprint:
         boolean:
 
 variables:
-  invert_net_value: "{{ 'true' if !input invert_net_value else 'false' }}"
+  invert_net_value_raw: !input invert_net_value
+  invert_net_value: "{{ 'true' if invert_net_value_raw else 'false' }}"
 
 trigger:
   - platform: homeassistant

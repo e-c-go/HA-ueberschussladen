@@ -37,3 +37,5 @@ action:
         **Erster Sensor:** {{ first_sensor }} → {{ first_value }}  
         **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }}  
         **Berechnung:** ({{ first_value }} - {{ second_value }}) = **{{ result }}**
+
+        

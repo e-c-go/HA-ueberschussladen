@@ -54,18 +54,10 @@ action:
       message: >
         **Überprüfe, ob alle Entitäts-IDs korrekt übergeben wurden:**
         
-        - `pv_power`: {{ '!input pv_power' }}
-        - `house_consumption`: {{ '!input house_consumption' }}
-        - `battery_power`: {{ '!input battery_power' }}
-        - `net_power`: {{ '!input net_power' }}
-        - `battery_soc`: {{ '!input battery_soc' }}
-
-        **Werte aus states():**
-        
-        - `pv_power`: {{ states('!input pv_power') }}
-        - `house_consumption`: {{ states('!input house_consumption') }}
-        - `battery_power`: {{ states('!input battery_power') }}
-        - `net_power`: {{ states('!input net_power') }}
-        - `battery_soc`: {{ states('!input battery_soc') }}
+        - `pv_power`: {{ states('**!input pv_power**') }}
+        - `house_consumption`: {{ states('**!input house_consumption**') }}
+        - `battery_power`: {{ states('**!input battery_power**') }}
+        - `net_power`: {{ states('**!input net_power**') }}
+        - `battery_soc`: {{ states('**!input battery_soc**') }}
 
         Falls hier "unknown" oder "none" steht, prüfe, ob die Sensoren in den Blueprint-Inputs richtig ausgewählt wurden!

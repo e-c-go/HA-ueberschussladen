@@ -1,6 +1,6 @@
 blueprint:
-  name: Debug Wallbox-Steuerung (100% funktionierend)
-  description: Test für die Wallbox-Automatisierung ohne `!input` in Templates
+  name: Debug Wallbox-Steuerung (NEUER TEST)
+  description: "Testet, ob `invert_net_value` korrekt gespeichert wird."
   domain: automation
   input:
     invert_net_value:
@@ -13,17 +13,8 @@ trigger:
   - platform: homeassistant
     event: start
 
-condition:
-  - condition: template
-    value_template: "{{ true }}"  # Dummy-Bedingung, damit Home Assistant es akzeptiert
-
 action:
   - service: persistent_notification.create
     data:
-      title: "Wallbox Debug"
-      message: >
-        {% if is_state('input_boolean.test_invert', 'on') %}
-          Vorzeichen invertiert: JA
-        {% else %}
-          Vorzeichen invertiert: NEIN
-        {% endif %}
+      title: "DEBUG: invert_net_value"
+      message: "Der Wert von invert_net_value ist: {{ states('input_boolean.wallbox_debug') }}"

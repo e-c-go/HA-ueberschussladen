@@ -1,20 +1,29 @@
 blueprint:
-  name: Test Entitätswert
+  name: Test Berechnung mit zwei Sensoren
   description: >
-    Wählt eine beliebige Entität aus und gibt deren aktuellen Wert aus.
+    Wählt zwei beliebige Sensoren aus, multipliziert den ersten mit 1000 und zieht den zweiten davon ab.
   domain: automation
   homeassistant:
     min_version: "2023.12.0"
 
   input:
-    any_sensor:
-      name: Beliebiger Sensor
+    sensor_1:
+      name: Erster Sensor (wird mit 1000 multipliziert)
+      selector:
+        entity:
+          domain: sensor
+    sensor_2:
+      name: Zweiter Sensor (wird abgezogen)
       selector:
         entity:
           domain: sensor
 
 variables:
-  selected_sensor: !input any_sensor
+  first_sensor: !input sensor_1
+  second_sensor: !input sensor_2
+  first_value: "{{ states(first_sensor) | float(0) * 1000 }}"
+  second_value: "{{ states(second_sensor) | float(0) }}"
+  result: "{{ first_value - second_value }}"
 
 trigger:
   - platform: time_pattern
@@ -23,7 +32,8 @@ trigger:
 action:
   - service: persistent_notification.create
     data:
-      title: "DEBUG: Sensorwert"
+      title: "DEBUG: Berechnung"
       message: >
-        **Gewählte Entität:** {{ selected_sensor }}  
-        **Aktueller Wert:** {{ states(selected_sensor) }}
+        **Erster Sensor:** {{ first_sensor }} → {{ first_value }}  
+        **Zweiter Sensor:** {{ second_sensor }} → {{ second_value }}  
+        **Berechnung:** ({{ first_value }} - {{ second_value }}) = **{{ result }}**

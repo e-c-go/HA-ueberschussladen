@@ -54,6 +54,7 @@ blueprint:
           step: 1
           mode: slider
           unit_of_measurement: A
+          default: 6
     max_charging_current:
       name: Maximal Charging Current (A)
       selector:
@@ -63,6 +64,7 @@ blueprint:
           step: 1
           mode: slider
           unit_of_measurement: A
+          default: 16
     min_charging_power:
       name: Minimal Charging Power (W)
       selector:

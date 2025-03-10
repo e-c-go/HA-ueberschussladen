@@ -1,7 +1,7 @@
 blueprint:
   name: Solar- und Ladeleistungsberechnung
   description: >
-    00.02_08:17
+    00.02_18:35
     Berechnet die verfügbare Ladeleistung basierend auf Solarleistung, Netzbezug, Hausverbrauch und Batterie.
     Zeigt zusätzlich die aktuelle Ladeleistung und Ladestromgrenzen an.
   domain: automation
@@ -77,6 +77,20 @@ blueprint:
       selector:
         entity:
           domain: switch
+    battery_soc:
+      name: Battery State of Charge (SoC)
+      selector:
+        entity:
+          domain: sensor
+    min_battery_soc:
+      name: Minimal Battery SoC (%)
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          mode: slider
+          unit_of_measurement: "%"
 
 variables:
   solar_sensor: !input solar_power
@@ -86,6 +100,7 @@ variables:
   charger_power_sensor: !input charging_station_power
   charger_current_sensor: !input charging_current
   solar_charging_switch: !input switch_solar_charging
+  battery_soc_sensor: !input battery_soc
 
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   grid_feed_value: "{{ states(grid_feed_sensor) | float(0) }}"
@@ -93,10 +108,12 @@ variables:
   battery_value: "{{ states(battery_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   charger_power_value: "{{ states(charger_power_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   charger_current_value: "{{ states(charger_current_sensor) | float(0) }}"
+  battery_soc_value: "{{ states(battery_soc_sensor) | float(0) }}"
   
   min_charger_current_value: !input min_charging_current
   max_charger_current_value: !input max_charging_current
   min_charger_power_value: !input min_charging_power
+  min_battery_soc_value: !input min_battery_soc
 
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
@@ -120,5 +137,7 @@ action:
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
         **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  
         **Solar Charging Switch:** {{ solar_charging_switch }}  
+        **Battery SoC:** {{ battery_soc_sensor }} → {{ battery_soc_value }} %  
+        **Minimal Battery SoC:** {{ min_battery_soc_value }} %  
 
         **Available Power for Charging:** {{ available_power }} W

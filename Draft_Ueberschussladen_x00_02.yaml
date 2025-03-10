@@ -133,8 +133,8 @@ variables:
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
 trigger:
-  - platform: time_pattern
-    seconds: "/{{ automation_interval_value | int }}"
+  - platform: template
+    value_template: "{{ (as_timestamp(now()) | int) % automation_interval_value == 0 }}"
 
 action:
   - service: persistent_notification.create

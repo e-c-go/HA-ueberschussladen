@@ -1,7 +1,7 @@
 blueprint:
   name: Solar- und Ladeleistungsberechnung
   description: >
-    00.02_08:10
+    00.02_08:17
     Berechnet die verfügbare Ladeleistung basierend auf Solarleistung, Netzbezug, Hausverbrauch und Batterie.
     Zeigt zusätzlich die aktuelle Ladeleistung und Ladestromgrenzen an.
   domain: automation
@@ -72,6 +72,11 @@ blueprint:
           step: 100
           mode: box
           unit_of_measurement: W
+    switch_solar_charging:
+      name: Switch Solar Charging
+      selector:
+        entity:
+          domain: switch
 
 variables:
   solar_sensor: !input solar_power
@@ -80,6 +85,7 @@ variables:
   battery_sensor: !input battery_charge_discharge
   charger_power_sensor: !input charging_station_power
   charger_current_sensor: !input charging_current
+  solar_charging_switch: !input switch_solar_charging
 
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   grid_feed_value: "{{ states(grid_feed_sensor) | float(0) }}"
@@ -113,5 +119,6 @@ action:
         **Minimal Charging Power:** {{ min_charger_power_value }} W  
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
         **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  
+        **Solar Charging Switch:** {{ solar_charging_switch }}  
 
         **Available Power for Charging:** {{ available_power }} W

@@ -1,7 +1,7 @@
 blueprint:
   name: Solar- und Ladeleistungsberechnung
   description: >
-    00.02_18:35
+    00.02_18:45
     Berechnet die verfügbare Ladeleistung basierend auf Solarleistung, Netzbezug, Hausverbrauch und Batterie.
     Zeigt zusätzlich die aktuelle Ladeleistung und Ladestromgrenzen an.
   domain: automation

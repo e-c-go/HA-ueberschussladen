@@ -1,7 +1,7 @@
 blueprint:
   name: Solar- und Ladeleistungsberechnung
   description: >
-    00.02_18:35
+    00.02_06:12
     Berechnet die verfügbare Ladeleistung basierend auf Solarleistung, Netzbezug, Hausverbrauch und Batterie.
     Zeigt zusätzlich die aktuelle Ladeleistung und Ladestromgrenzen an.
   domain: automation
@@ -49,10 +49,12 @@ blueprint:
       name: Minimal Charging Current (A)
       selector:
         number:
-          min: 6
-          max: 32
+          min: 0
+          max: 16
           step: 1
           mode: slider
+          unit_of_measurement: A
+          initial: 6
     max_charging_current:
       name: Maximal Charging Current (A)
       selector:
@@ -61,6 +63,17 @@ blueprint:
           max: 32
           step: 1
           mode: slider
+          unit_of_measurement: A
+          initial: 16
+    min_charging_power:
+      name: Minimal Charging Power (W)
+      selector:
+        number:
+          min: 1000
+          max: 11000
+          step: 100
+          mode: slider
+          unit_of_measurement: W
 
 variables:
   solar_sensor: !input solar_power
@@ -79,6 +92,7 @@ variables:
   
   min_charger_current_value: !input min_charging_current
   max_charger_current_value: !input max_charging_current
+  min_charger_power_value: !input min_charging_power
 
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
@@ -98,6 +112,7 @@ action:
         **Charging Station Power:** {{ charger_power_sensor }} → {{ charger_power_value }} W  
         **Charging Current:** {{ charger_current_sensor }} → {{ charger_current_value }} A  
 
+        **Minimal Charging Power:** {{ min_charger_power_value }} W  
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
         **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  
 

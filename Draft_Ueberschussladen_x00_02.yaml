@@ -94,6 +94,17 @@ blueprint:
           mode: slider
           unit_of_measurement: "%"
 
+    automation_interval:
+      name: Automation Interval (seconds)
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 3600
+          step: 1
+          mode: slider
+          unit_of_measurement: s
+
 variables:
   solar_sensor: !input solar_power
   grid_feed_sensor: !input grid_feed
@@ -117,11 +128,13 @@ variables:
   min_charger_power_value: !input min_charging_power
   min_battery_soc_value: !input min_battery_soc
 
+  automation_interval_value: !input automation_interval
+
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
 trigger:
   - platform: time_pattern
-    seconds: "/30"
+    seconds: "/{{ automation_interval_value }}"
 
 action:
   - service: persistent_notification.create

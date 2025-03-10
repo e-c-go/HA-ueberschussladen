@@ -85,6 +85,7 @@ blueprint:
           domain: sensor
     min_battery_soc:
       name: Minimal Battery SoC (%)
+      default: 50
       selector:
         number:
           min: 0

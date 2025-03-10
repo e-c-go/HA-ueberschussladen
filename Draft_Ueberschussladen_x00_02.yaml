@@ -66,7 +66,12 @@ blueprint:
     min_charging_power:
       name: Minimal Charging Power (W)
       selector:
-        text:
+        number:
+          min: 2000
+          max: 6000
+          step: 100
+          mode: box
+          unit_of_measurement: W
 
 variables:
   solar_sensor: !input solar_power

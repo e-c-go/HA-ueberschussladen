@@ -105,6 +105,12 @@ blueprint:
           mode: slider
           unit_of_measurement: s
 
+    charger_mode:
+      name: Charger Mode
+      selector:
+        entity:
+          domain: sensor
+
 variables:
   solar_sensor: !input solar_power
   grid_feed_sensor: !input grid_feed
@@ -132,6 +138,8 @@ variables:
 
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
+  charger_mode_sensor: !input charger_mode
+
 trigger:
   - platform: template
     value_template: "{{ (as_timestamp(now()) | int) % automation_interval_value == 0 }}"
@@ -147,6 +155,7 @@ action:
         **Battery Charge/-discharge:** {{ battery_sensor }} → {{ battery_value }} W  
         **Charging Station Power:** {{ charger_power_sensor }} → {{ charger_power_value }} W  
         **Charging Current:** {{ charger_current_sensor }} → {{ charger_current_value }} A  
+        **Charger Mode:** {{ charger_mode_sensor }}  
 
         **Minimal Charging Power:** {{ min_charger_power_value }} W  
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  

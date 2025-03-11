@@ -155,12 +155,12 @@ action:
         **Battery Charge/-discharge:** {{ battery_sensor }} → {{ battery_value }} W  
         **Charging Station Power:** {{ charger_power_sensor }} → {{ charger_power_value }} W  
         **Charging Current:** {{ charger_current_sensor }} → {{ charger_current_value }} A  
-        **Charger Mode:** {{ charger_mode_sensor }}  
+        **Charger Mode:** {{ states(charger_mode_sensor) }}  
+        **Solar Charging Switch:** {{ states(solar_charging_switch) }}  
 
         **Minimal Charging Power:** {{ min_charger_power_value }} W  
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
         **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  
-        **Solar Charging Switch:** {{ solar_charging_switch }}  
         **Battery SoC:** {{ battery_soc_sensor }} → {{ battery_soc_value }} %  
         **Minimal Battery SoC:** {{ min_battery_soc_value }} %  
 

@@ -166,6 +166,9 @@ action:
           - condition: numeric_state
             entity_id: !input battery_soc
             above: !input min_battery_soc
+          - condition: numeric_state
+            value_template: "{{ available_power }}"
+            above: !input min_charging_power
           - condition: template
             value_template: "{{ states(charger_mode_sensor) in ['waiting', 'charge done'] }}"
         sequence:

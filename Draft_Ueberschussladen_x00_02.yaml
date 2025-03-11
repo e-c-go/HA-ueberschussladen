@@ -111,6 +111,17 @@ blueprint:
         entity:
           domain: sensor
 
+    power_per_amp:
+      name: Power per Ampere (W)
+      default: 200
+      selector:
+        number:
+          min: 200
+          max: 1000
+          step: 50
+          mode: slider
+          unit_of_measurement: W
+
 variables:
   solar_sensor: !input solar_power
   grid_feed_sensor: !input grid_feed
@@ -140,6 +151,8 @@ variables:
 
   charger_mode_sensor: !input charger_mode
 
+  power_per_amp_value: !input power_per_amp
+
 trigger:
   - platform: template
     value_template: "{{ (as_timestamp(now()) | int) % automation_interval_value == 0 }}"
@@ -165,3 +178,4 @@ action:
         **Minimal Battery SoC:** {{ min_battery_soc_value }} %  
 
         **Available Power for Charging:** {{ available_power }} W
+        **Power per Ampere:** {{ power_per_amp_value }} W  

@@ -158,6 +158,22 @@ trigger:
     value_template: "{{ (as_timestamp(now()) | int) % automation_interval_value == 0 }}"
 
 action:
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input switch_solar_charging
+            state: 'on'
+          - condition: numeric_state
+            entity_id: !input battery_soc
+            above: !input min_battery_soc
+          - condition: template
+            value_template: "{{ states(charger_mode_sensor) in ['waiting', 'charge done'] }}"
+        sequence:
+          - service: number.set_value
+            target:
+              entity_id: !input charging_current
+            data:
+              value: !input min_charging_current
   - service: persistent_notification.create
     data:
       title: "Solar- & Ladeleistungsberechnung"
@@ -178,4 +194,4 @@ action:
         **Minimal Battery SoC:** {{ min_battery_soc_value }} %  
 
         **Available Power for Charging:** {{ available_power }} W
-        **Power per Ampere:** {{ power_per_amp_value }} W  
+        **Power per Ampere:** {{ power_per_amp_value }} W

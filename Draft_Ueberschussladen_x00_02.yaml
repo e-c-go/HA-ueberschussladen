@@ -43,7 +43,7 @@ blueprint:
       name: Charging Current (A)
       selector:
         entity:
-          domain: sensor
+          domain: number
           device_class: current
           multiple: false
     min_charging_current:

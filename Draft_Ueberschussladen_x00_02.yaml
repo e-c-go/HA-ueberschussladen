@@ -94,34 +94,6 @@ blueprint:
           mode: slider
           unit_of_measurement: "%"
 
-    automation_interval:
-      name: Automation Interval (seconds)
-      default: 30
-      selector:
-        number:
-          min: 15
-          max: 300
-          step: 15
-          mode: slider
-          unit_of_measurement: s
-
-    charger_mode:
-      name: Charger Mode
-      selector:
-        entity:
-          domain: sensor
-
-    power_per_amp:
-      name: Power per Ampere (W)
-      default: 200
-      selector:
-        number:
-          min: 200
-          max: 1000
-          step: 50
-          mode: slider
-          unit_of_measurement: W
-
 variables:
   solar_sensor: !input solar_power
   grid_feed_sensor: !input grid_feed
@@ -135,7 +107,7 @@ variables:
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   grid_feed_value: "{{ states(grid_feed_sensor) | float(0) }}"
   home_consumption_value: "{{ states(home_consumption_sensor) | float(0) }}"
-  battery_value: "{{ states(battery_sensor) | float(0) / 1000 }}"  # Umrechnung W → kW
+  battery_value: "{{ states(battery_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   charger_power_value: "{{ states(charger_power_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   charger_current_value: "{{ states(charger_current_sensor) | float(0) }}"
   battery_soc_value: "{{ states(battery_soc_sensor) | float(0) }}"
@@ -145,45 +117,13 @@ variables:
   min_charger_power_value: !input min_charging_power
   min_battery_soc_value: !input min_battery_soc
 
-  automation_interval_value: !input automation_interval
-
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
 
-  charger_mode_sensor: !input charger_mode
-
-  power_per_amp_value: !input power_per_amp
-
 trigger:
-  - platform: template
-    value_template: "{{ (as_timestamp(now()) | int) % automation_interval_value == 0 }}"
+  - platform: time_pattern
+    seconds: "/30"
 
 action:
-  - choose:
-      - conditions:
-          - condition: state
-            entity_id: !input switch_solar_charging
-            state: 'on'
-          - condition: numeric_state
-            entity_id: !input battery_soc
-            above: !input min_battery_soc
-          - condition: template
-            value_template: "{{ available_power | float(0) > min_charger_power_value | float(0) }}"
-          - condition: template
-            value_template: "{{ states(charger_mode_sensor) in ['waiting', 'charge done'] }}"
-        sequence:
-          - service: number.set_value
-            target:
-              entity_id: !input charging_current
-            data:
-              value: !input min_charging_current
-          - service: persistent_notification.create
-            data:
-              title: "Bedingungen erfüllt"
-              message: >
-                **Solar Charging Switch:** {{ states(solar_charging_switch) }}  
-                **Battery SoC:** {{ battery_soc_sensor }} → {{ battery_soc_value }} %  
-                **Available Power for Charging:** {{ available_power }} W  
-                **Charger Mode:** {{ states(charger_mode_sensor) }}  
   - service: persistent_notification.create
     data:
       title: "Solar- & Ladeleistungsberechnung"
@@ -194,14 +134,12 @@ action:
         **Battery Charge/-discharge:** {{ battery_sensor }} → {{ battery_value }} W  
         **Charging Station Power:** {{ charger_power_sensor }} → {{ charger_power_value }} W  
         **Charging Current:** {{ charger_current_sensor }} → {{ charger_current_value }} A  
-        **Charger Mode:** {{ states(charger_mode_sensor) }}  
-        **Solar Charging Switch:** {{ states(solar_charging_switch) }}  
 
         **Minimal Charging Power:** {{ min_charger_power_value }} W  
         **Minimal Charging Current (Slider):** {{ min_charger_current_value }} A  
         **Maximal Charging Current (Slider):** {{ max_charger_current_value }} A  
+        **Solar Charging Switch:** {{ solar_charging_switch }}  
         **Battery SoC:** {{ battery_soc_sensor }} → {{ battery_soc_value }} %  
         **Minimal Battery SoC:** {{ min_battery_soc_value }} %  
 
         **Available Power for Charging:** {{ available_power }} W
-        **Power per Ampere:** {{ power_per_amp_value }} W

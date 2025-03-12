@@ -45,6 +45,7 @@ blueprint:
         entity:
           domain: sensor
           device_class: current
+          multiple: false
     min_charging_current:
       name: Minimal Charging Current (A)
       default: 6

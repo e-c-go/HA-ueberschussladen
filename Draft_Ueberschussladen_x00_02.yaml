@@ -108,7 +108,7 @@ variables:
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   grid_feed_value: "{{ states(grid_feed_sensor) | float(0) }}"
   home_consumption_value: "{{ states(home_consumption_sensor) | float(0) }}"
-  battery_value: "{{ states(battery_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
+  battery_value: "{{ states(battery_sensor) | float(0) / 1000 }}"  # Umrechnung W → kW
   charger_power_value: "{{ states(charger_power_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
   charger_current_value: "{{ states(charger_current_sensor) | float(0) }}"
   battery_soc_value: "{{ states(battery_soc_sensor) | float(0) }}"

@@ -158,6 +158,10 @@ action:
             value_template: >
               {{ wallbox_status == 'Waiting' or wallbox_status == 'Charge Done' }}
         sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Debug"
+              message: "Wallbox Status: Waiting or Charge Done"
           - service: number.set_value
             target:
               entity_id: !input charging_current
@@ -172,12 +176,20 @@ action:
             value_template: >
               {{ wallbox_status == 'Charging' and solar_charging_active }}
         sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Debug"
+              message: "Wallbox Status: Charging and Solar Charging Active"
           - choose:
               - conditions:
                   - condition: template
                     value_template: >
                       {{ (battery_value + grid_feed_value) > (charger_current_value + 1) * power_per_amp_value and charger_current_value < max_charger_current }}
                 sequence:
+                  - service: persistent_notification.create
+                    data:
+                      title: "Debug"
+                      message: "Increasing Charging Current"
                   - service: number.set_value
                     target:
                       entity_id: !input charging_current
@@ -188,6 +200,10 @@ action:
                     value_template: >
                       {{ (battery_value + grid_feed_value) < 20 and charger_current_value > min_charger_current }}
                 sequence:
+                  - service: persistent_notification.create
+                    data:
+                      title: "Debug"
+                      message: "Decreasing Charging Current"
                   - service: number.set_value
                     target:
                       entity_id: !input charging_current
@@ -198,6 +214,10 @@ action:
                     value_template: >
                       {{ charger_current_value == min_charger_current and (battery_value + grid_feed_value) < 20 }}
                 sequence:
+                  - service: persistent_notification.create
+                    data:
+                      title: "Debug"
+                      message: "Setting Charging Current to 0 and Turning Off Solar Charging"
                   - service: number.set_value
                     target:
                       entity_id: !input charging_current

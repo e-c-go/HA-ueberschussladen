@@ -100,6 +100,15 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
+    power_per_amp:
+      name: Leistung je Ampere Ladestrom (W/A)
+      selector:
+        number:
+          min: 0
+          max: 1000
+          step: 1
+          mode: box
+          unit_of_measurement: W/A
 
 variables:
   solar_sensor: !input solar_power
@@ -123,6 +132,7 @@ variables:
   max_charger_current_value: !input max_charging_current
   min_charger_power_value: !input min_charging_power
   min_battery_soc_value: !input min_battery_soc
+  power_per_amp_value: !input power_per_amp
 
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
   wallbox_status: "{{ states('sensor.wallbox_status') }}"

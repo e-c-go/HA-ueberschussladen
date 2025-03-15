@@ -95,6 +95,12 @@ blueprint:
           mode: slider
           unit_of_measurement: "%"
 
+    solar_charging_active:
+      name: Solarladung aktiv
+      selector:
+        entity:
+          domain: input_boolean
+
 variables:
   solar_sensor: !input solar_power
   grid_feed_sensor: !input grid_feed
@@ -121,6 +127,8 @@ variables:
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
   wallbox_status: "{{ states('sensor.wallbox_status') }}"
   min_charger_current: 6
+
+  solar_charging_active: !input solar_charging_active
 
 trigger:
   - platform: time_pattern

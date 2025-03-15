@@ -152,6 +152,14 @@ condition:
          (battery_value + grid_feed_value) > min_charger_power_value }}
 
 action:
+  - service: persistent_notification.create
+    data:
+      title: "Debug"
+      message: >
+        Battery SoC > Min Battery SoC: {{ battery_soc_value > min_battery_soc_value }}  
+        Wallbox Status (Waiting or Charge Done or Charging): {{ wallbox_status == 'Waiting' or wallbox_status == 'Charge Done' or wallbox_status == 'Charging' }}  
+        Battery Value + Grid Feed Value > Min Charger Power Value: {{ (battery_value + grid_feed_value) > min_charger_power_value }}
+
   - choose:
       - conditions:
           - condition: template

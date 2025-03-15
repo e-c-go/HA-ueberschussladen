@@ -137,8 +137,8 @@ variables:
   available_power: "{{ solar_value + grid_feed_value - home_consumption_value }}"
   wallbox_status: "{{ states('sensor.wallbox_status') }}"
   min_charger_current: 6
-
-  solar_charging_active: !input solar_charging_active
+  max_charger_current: !input max_charging_current
+  solar_charging_active: "{{ is_state('input_boolean.solar_charging_active', 'on') }}"
 
 trigger:
   - platform: time_pattern
@@ -148,7 +148,7 @@ condition:
   - condition: template
     value_template: >
       {{ battery_soc_value > min_battery_soc_value and
-         (wallbox_status == 'Waiting' or wallbox_status == 'Charge Done') and
+         (wallbox_status == 'Waiting' or wallbox_status == 'Charge Done' or wallbox_status == 'Charging') and
          (battery_value + grid_feed_value) > min_charger_power_value }}
 
 action:
@@ -156,15 +156,57 @@ action:
       - conditions:
           - condition: template
             value_template: >
-              {{ battery_soc_value > min_battery_soc_value and
-                 (wallbox_status == 'Waiting' or wallbox_status == 'Charge Done') and
-                 (battery_value + grid_feed_value) > min_charger_power_value }}
+              {{ wallbox_status == 'Waiting' or wallbox_status == 'Charge Done' }}
         sequence:
           - service: number.set_value
             target:
               entity_id: !input charging_current
             data:
               value: "{{ min_charger_current }}"
+          - service: input_boolean.turn_on
+            target:
+              entity_id: !input solar_charging_active
+
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ wallbox_status == 'Charging' and solar_charging_active }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ (battery_value + grid_feed_value) > (charger_current_value + 1) * power_per_amp_value and charger_current_value < max_charger_current }}
+                sequence:
+                  - service: number.set_value
+                    target:
+                      entity_id: !input charging_current
+                    data:
+                      value: "{{ charger_current_value + 1 }}"
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ (battery_value + grid_feed_value) < 20 and charger_current_value > min_charger_current }}
+                sequence:
+                  - service: number.set_value
+                    target:
+                      entity_id: !input charging_current
+                    data:
+                      value: "{{ charger_current_value - 1 }}"
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ charger_current_value == min_charger_current and (battery_value + grid_feed_value) < 20 }}
+                sequence:
+                  - service: number.set_value
+                    target:
+                      entity_id: !input charging_current
+                    data:
+                      value: 0
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: !input solar_charging_active
+
   - service: persistent_notification.create
     data:
       title: "Solar- & Ladeleistungsberechnung"

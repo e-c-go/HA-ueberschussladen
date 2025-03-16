@@ -196,7 +196,7 @@ action:
                                                   data:
                                                     title: "DEBUG: Normale Temperatur"
                                                     message: "Zieltemperatur auf normale Temperatur gesetzt."
-                      default:
+                      default: []
                         - choose:
                             - conditions:
                                 - condition: numeric_state

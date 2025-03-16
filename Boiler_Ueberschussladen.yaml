@@ -127,38 +127,38 @@ action:
   - choose:
       - conditions:
           - condition: numeric_state
-            entity_id: {{ input.temperature_sensor }}
-            below: {{ input.target_temperature }}
+            entity_id: !input temperature_sensor
+            below: !input target_temperature
         sequence:
           - service: switch.turn_on
             target:
-              device_id: {{ input.shelly_phase_1 }}
+              device_id: !input shelly_phase_1
           - choose:
               - conditions:
                   - condition: template
                     value_template: >
-                      {{ states('{{ input.solar_generation }}') | float > 
-                         {{ input.power_consumption_phase_1 }} | float }}
+                      {{ states('!input.solar_generation') | float > 
+                         !input.power_consumption_phase_1 | float }}
                 sequence:
                   - service: switch.turn_on
                     target:
-                      device_id: {{ input.shelly_phase_2 }}
+                      device_id: !input shelly_phase_2
               - conditions:
                   - condition: template
                     value_template: >
-                      {{ states('{{ input.solar_generation }}') | float > 
-                         ({{ input.power_consumption_phase_1 }} | float + 
-                          {{ input.power_consumption_phase_2 }} | float) }}
+                      {{ states('!input.solar_generation') | float > 
+                         (!input.power_consumption_phase_1 | float + 
+                          !input.power_consumption_phase_2 | float) }}
                 sequence:
                   - service: switch.turn_on
                     target:
-                      device_id: {{ input.shelly_phase_3 }}
+                      device_id: !input shelly_phase_3
   - choose:
       - conditions:
           - condition: template
             value_template: >
-              {% set letztes_datum = states('{{ input.last_legionella_run }}') %}
-              {% set periodizitat = states('{{ input.legionella_period }}') | float(0) %}
+              {% set letztes_datum = states('!input.last_legionella_run') %}
+              {% set periodizitat = states('!input.legionella_period') | float(0) %}
               {% if letztes_datum not in ['unknown', 'none', 'unavailable'] and periodizitat > 0 %}
                 {{ (now().date() - as_datetime(letztes_datum).date()).days > periodizitat }}
               {% else %}
@@ -167,17 +167,17 @@ action:
         sequence:
           - service: input_number.set_value
             target:
-              entity_id: {{ input.target_temperature }}
+              entity_id: !input target_temperature
             data:
-              value: "{{ states('{{ input.legionella_temperature }}') | float }}"
+              value: "{{ states('!input.legionella_temperature') | float }}"
           - service: persistent_notification.create
             data:
               title: "DEBUG: Legionellensteuerung"
-              message: "Wert sollte gesetzt werden: {{ states('{{ input.legionella_temperature }}') | float }}"
+              message: "Wert sollte gesetzt werden: {{ states('!input.legionella_temperature') | float }}"
     default:
       - service: input_number.set_value
         target:
-          entity_id: {{ input.target_temperature }}
+          entity_id: !input target_temperature
         data:
-          value: "{{ states('{{ input.normal_temperature }}') | float }}"
+          value: "{{ states('!input.normal_temperature') | float }}"
 mode: single

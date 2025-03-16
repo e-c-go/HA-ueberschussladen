@@ -196,7 +196,7 @@ action:
                                                   data:
                                                     title: "DEBUG: Normale Temperatur"
                                                     message: "Zieltemperatur auf normale Temperatur gesetzt."
-                      default: []
+                      default:
                         - choose:
                             - conditions:
                                 - condition: numeric_state
@@ -263,7 +263,7 @@ action:
                                     sequence:
                                       - service: input_datetime.set_datetime
                                         target:
-                                          entity_id: !input.last_boiler_charge
+                                          entity_id: !input last_boiler_charge
                                         data:
                                           datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
                                       - service: persistent_notification.create
@@ -278,12 +278,12 @@ action:
                                     sequence:
                                       - service: input_datetime.set_datetime
                                         target:
-                                          entity_id: !input.last_boiler_charge
+                                          entity_id: !input last_boiler_charge
                                         data:
                                           datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
                                       - service: input_datetime.set_datetime
                                         target:
-                                          entity_id: !input.last_legionella_run
+                                          entity_id: !input last_legionella_run
                                         data:
                                           datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
                                       - service: persistent_notification.create

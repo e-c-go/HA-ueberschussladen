@@ -1,0 +1,183 @@
+blueprint:
+  name: Solarüberschussladen des Warmwasserboilers
+  description: >
+    Steuerung des Warmwasserboilers basierend auf Solarüberschuss und Batterieladezustand.
+  domain: automation
+  input:
+    shelly_phase_1:
+      name: Shelly Phase 1
+      selector:
+        device:
+          integration: shelly
+          manufacturer: Shelly
+    shelly_phase_2:
+      name: Shelly Phase 2
+      selector:
+        device:
+          integration: shelly
+          manufacturer: Shelly
+    shelly_phase_3:
+      name: Shelly Phase 3
+      selector:
+        device:
+          integration: shelly
+          manufacturer: Shelly
+    temperature_sensor:
+      name: Temperatur Sensor
+      selector:
+        entity:
+          domain: sensor
+    solar_generation:
+      name: Solaranlagenerzeugung
+      selector:
+        entity:
+          domain: sensor
+    battery_min_charge:
+      name: Minimaler Batterieladezustand
+      selector:
+        entity:
+          domain: sensor
+    grid_feed_in:
+      name: Netzeinspeisung
+      selector:
+        entity:
+          domain: sensor
+    battery_charge_discharge:
+      name: Batterie Ladung/Entladung
+      selector:
+        entity:
+          domain: sensor
+    min_phases:
+      name: Minimale Anzahl Phasen
+      selector:
+        number:
+          min: 1
+          max: 3
+          step: 1
+    power_consumption_phase_1:
+      name: Leistungsaufnahme Phase 1
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+    power_consumption_phase_2:
+      name: Leistungsaufnahme Phase 2
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+    power_consumption_phase_3:
+      name: Leistungsaufnahme Phase 3
+      selector:
+        number:
+          min: 0
+          max: 5000
+          unit_of_measurement: W
+    target_temperature:
+      name: Zieltemperatur
+      selector:
+        entity:
+          domain: input_number
+    legionella_temperature:
+      name: Legionellentemperatur
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: °C
+    legionella_period:
+      name: Legionellen Periodizität (Tage)
+      selector:
+        number:
+          min: 0
+          max: 365
+          unit_of_measurement: Tage
+    last_legionella_run:
+      name: Letzte Legionellenschaltung
+      selector:
+        entity:
+          domain: input_datetime
+    normal_temperature:
+      name: Normale Zieltemperatur
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: °C
+
+trigger:
+  - platform: state
+    entity_id: !input solar_generation
+  - platform: state
+    entity_id: !input battery_min_charge
+  - platform: state
+    entity_id: !input grid_feed_in
+  - platform: state
+    entity_id: !input battery_charge_discharge
+
+condition:
+  - condition: template
+    value_template: >
+      {{ states('!input.battery_min_charge') | float > 20 and
+         states('!input.solar_generation') | float > 1000 }}
+
+action:
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input temperature_sensor
+            below: !input target_temperature
+        sequence:
+          - service: switch.turn_on
+            target:
+              device_id: !input shelly_phase_1
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ states('!input.solar_generation') | float > 
+                         !input.power_consumption_phase_1 | float }}
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      device_id: !input shelly_phase_2
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ states('!input.solar_generation') | float > 
+                         (!input.power_consumption_phase_1 | float + 
+                          !input.power_consumption_phase_2 | float) }}
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      device_id: !input shelly_phase_3
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set letztes_datum = states('!input.last_legionella_run') %}
+              {% set periodizitat = states('!input.legionella_period') | float(0) %}
+              {% if letztes_datum not in ['unknown', 'none', 'unavailable'] and periodizitat > 0 %}
+                {{ (now().date() - as_datetime(letztes_datum).date()).days > periodizitat }}
+              {% else %}
+                false
+              {% endif %}
+        sequence:
+          - service: input_number.set_value
+            target:
+              entity_id: !input.target_temperature
+            data:
+              value: "{{ states('!input.legionella_temperature') | float }}"
+          - service: persistent_notification.create
+            data:
+              title: "DEBUG: Legionellensteuerung"
+              message: "Wert sollte gesetzt werden: {{ states('!input.legionella_temperature') | float }}"
+    default:
+      - service: input_number.set_value
+        target:
+          entity_id: !input.target_temperature
+        data:
+          value: "{{ states('!input.normal_temperature') | float }}"
+mode: single

@@ -50,14 +50,303 @@ blueprint:
       selector:
         entity:
           domain: input_number
+    last_boiler_charge:
+      name: Letzte Boilerladung
+      selector:
+        entity:
+          domain: input_datetime
+    min_battery_charge:
+      name: Minimaler Batterieladestand
+      selector:
+        entity:
+          domain: input_number
+    current_battery_soc:
+      name: Aktueller SoC der Batterie
+      selector:
+        entity:
+          domain: sensor
+    battery_charge_discharge_power:
+      name: Lade-Entladeleistung der Batterie
+      selector:
+        entity:
+          domain: sensor
+    grid_feed_in_power:
+      name: Netzeinspeisung in W
+      selector:
+        entity:
+          domain: sensor
+    boiler_surplus_charging_active:
+      name: Boiler Überschussladen aktiv
+      selector:
+        entity:
+          domain: input_boolean
+    min_solar_share:
+      name: Minimaler Solaranteil in %
+      selector:
+        entity:
+          domain: input_number
+    boiler_time_controlled_charging_active:
+      name: Boilerladung zeigesteuert aktiv
+      selector:
+        entity:
+          domain: switch
+    last_legionella_run:
+      name: Letzte Legionellenladung
+      selector:
+        entity:
+          domain: input_datetime
 
 trigger:
-  # ...existing code...
+  - platform: time_pattern
+    seconds: "/30"
 
 condition:
-  # ...existing code...
+  - condition: template
+    value_template: >
+      {{ as_datetime(states('!input.last_boiler_charge')).date() != now().date() }}
 
 action:
-  # ...existing code...
-
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ as_datetime(states('!input.last_boiler_charge')).date() != now().date() }}
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "DEBUG: Letzte Boilerladung"
+              message: "Letzte Boilerladung war nicht heute."
+          - choose:
+              - conditions:
+                  - condition: state
+                    entity_id: !input boiler_time_controlled_charging_active
+                    state: "off"
+                sequence:
+                  - service: persistent_notification.create
+                    data:
+                      title: "DEBUG: Zeitgesteuerte Boilerladung"
+                      message: "Zeitgesteuerte Boilerladung ist aus."
+                  - choose:
+                      - conditions:
+                          - condition: state
+                            entity_id: !input boiler_surplus_charging_active
+                            state: "off"
+                        sequence:
+                          - service: persistent_notification.create
+                            data:
+                              title: "DEBUG: Überschussladen Boiler"
+                              message: "Überschussladen Boiler ist aus."
+                          - choose:
+                              - conditions:
+                                  - condition: numeric_state
+                                    entity_id: !input current_battery_soc
+                                    above: !input min_battery_charge
+                                sequence:
+                                  - service: persistent_notification.create
+                                    data:
+                                      title: "DEBUG: Batterie SoC"
+                                      message: "Batterie SoC ist über dem minimalen Ladezustand."
+                                  - choose:
+                                      - conditions:
+                                          - condition: template
+                                            value_template: >
+                                              {{ states('!input.solar_generation') | float > 
+                                                 (states('!input.min_stage') | float * 
+                                                  states('!input.power_per_stage') | float * 
+                                                  states('!input.min_solar_share') | float / 100) }}
+                                        sequence:
+                                          - service: persistent_notification.create
+                                            data:
+                                              title: "DEBUG: Solarerzeugung"
+                                              message: "Solarerzeugung ist über dem minimalen Solaranteil."
+                                          - service: switch.turn_on
+                                            target:
+                                              entity_id: !input shelly_phase_1
+                                          - service: input_boolean.turn_on
+                                            target:
+                                              entity_id: !input boiler_surplus_charging_active
+                                          - choose:
+                                              - conditions:
+                                                  - condition: template
+                                                    value_template: >
+                                                      {% set letztes_datum = states('!input.last_legionella_run') %}
+                                                      {% set periodizitat = states('!input.legionella_period') | float(0) %}
+                                                      {% if letztes_datum not in ['unknown', 'none', 'unavailable'] and periodizitat > 0 %}
+                                                        {{ (now().date() - as_datetime(letztes_datum).date()).days > periodizitat }}
+                                                      {% else %}
+                                                        false
+                                                      {% endif %}
+                                                sequence:
+                                                  - service: input_number.set_value
+                                                    target:
+                                                      entity_id: !input target_temperature
+                                                    data:
+                                                      value: "{{ states('!input.legionella_temperature') | float }}"
+                                                  - service: persistent_notification.create
+                                                    data:
+                                                      title: "DEBUG: Legionellensteuerung"
+                                                      message: "Zieltemperatur auf Legionellentemperatur gesetzt."
+                                              default:
+                                                - service: input_number.set_value
+                                                  target:
+                                                    entity_id: !input target_temperature
+                                                  data:
+                                                    value: "{{ states('!input.normal_temperature') | float }}"
+                                                - service: persistent_notification.create
+                                                  data:
+                                                    title: "DEBUG: Normale Temperatur"
+                                                    message: "Zieltemperatur auf normale Temperatur gesetzt."
+                      default:
+                        - choose:
+                            - conditions:
+                                - condition: numeric_state
+                                  entity_id: !input current_boiler_temperature
+                                  below: !input target_temperature
+                              sequence:
+                                - service: persistent_notification.create
+                                  data:
+                                    title: "DEBUG: Boilertemperatur"
+                                    message: "Aktuelle Boilertemperatur ist unter der Zieltemperatur."
+                                - choose:
+                                    - conditions:
+                                        - condition: numeric_state
+                                          entity_id: !input current_battery_soc
+                                          above: !input min_battery_charge
+                                      sequence:
+                                        - service: persistent_notification.create
+                                          data:
+                                            title: "DEBUG: Batterie SoC"
+                                            message: "Batterie SoC ist über dem minimalen Ladezustand."
+                                        - choose:
+                                            - conditions:
+                                                - condition: state
+                                                  entity_id: !input shelly_phase_3
+                                                  state: "off"
+                                              sequence:
+                                                - choose:
+                                                    - conditions:
+                                                        - condition: template
+                                                          value_template: >
+                                                            {{ states('!input.battery_charge_discharge_power') | float + 
+                                                               states('!input.grid_feed_in_power') | float > 
+                                                               states('!input.power_per_stage') | float }}
+                                                      sequence:
+                                                        - service: persistent_notification.create
+                                                          data:
+                                                            title: "DEBUG: Ladeleistung"
+                                                            message: "Ladeleistung und Netzeinspeisung sind ausreichend."
+                                                        - service: switch.turn_on
+                                                          target:
+                                                            entity_id: !input shelly_phase_3
+                                            default: []
+                                    default: []
+                            default:
+                              - service: switch.turn_off
+                                target:
+                                  entity_id: !input shelly_phase_1
+                              - service: switch.turn_off
+                                target:
+                                  entity_id: !input shelly_phase_2
+                              - service: switch.turn_off
+                                target:
+                                  entity_id: !input shelly_phase_3
+                              - service: persistent_notification.create
+                                data:
+                                  title: "DEBUG: Boilerphasen"
+                                  message: "Alle Boilerphasen ausgeschaltet."
+                              - choose:
+                                  - conditions:
+                                      - condition: template
+                                        value_template: >
+                                          {{ states('!input.target_temperature') | float == 
+                                             states('!input.normal_temperature') | float }}
+                                    sequence:
+                                      - service: input_datetime.set_datetime
+                                        target:
+                                          entity_id: !input.last_boiler_charge
+                                        data:
+                                          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+                                      - service: persistent_notification.create
+                                        data:
+                                          title: "DEBUG: Letzte Boilerladung"
+                                          message: "Letzte Boilerladung auf jetzt gesetzt."
+                                  - conditions:
+                                      - condition: template
+                                        value_template: >
+                                          {{ states('!input.target_temperature') | float == 
+                                             states('!input.legionella_temperature') | float }}
+                                    sequence:
+                                      - service: input_datetime.set_datetime
+                                        target:
+                                          entity_id: !input.last_boiler_charge
+                                        data:
+                                          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+                                      - service: input_datetime.set_datetime
+                                        target:
+                                          entity_id: !input.last_legionella_run
+                                        data:
+                                          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+                                      - service: persistent_notification.create
+                                        data:
+                                          title: "DEBUG: Letzte Legionellenladung"
+                                          message: "Letzte Legionellenladung auf jetzt gesetzt."
+                              - service: input_boolean.turn_off
+                                target:
+                                  entity_id: !input boiler_surplus_charging_active
+  - choose:
+      - conditions:
+          - condition: numeric_state
+            entity_id: !input current_boiler_temperature
+            below: !input normal_temperature
+        sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: !input shelly_phase_1
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ states('!input.solar_generation') | float > 
+                         !input.power_per_stage | float }}
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: !input shelly_phase_2
+              - conditions:
+                  - condition: template
+                    value_template: >
+                      {{ states('!input.solar_generation') | float > 
+                         (!input.power_per_stage | float + 
+                          !input.power_per_stage | float) }}
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: !input shelly_phase_3
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {% set letztes_datum = states('!input.last_legionella_run') %}
+              {% set periodizitat = states('!input.legionella_period') | float(0) %}
+              {% if letztes_datum not in ['unknown', 'none', 'unavailable'] and periodizitat > 0 %}
+                {{ (now().date() - as_datetime(letztes_datum).date()).days > periodizitat }}
+              {% else %}
+                false
+              {% endif %}
+        sequence:
+          - service: input_number.set_value
+            target:
+              entity_id: !input target_temperature
+            data:
+              value: "{{ states('!input.legionella_temperature') | float }}"
+          - service: persistent_notification.create
+            data:
+              title: "DEBUG: Legionellensteuerung"
+              message: "Wert sollte gesetzt werden: {{ states('!input.legionella_temperature') | float }}"
+    default:
+      - service: input_number.set_value
+        target:
+          entity_id: !input target_temperature
+        data:
+          value: "{{ states('!input.normal_temperature') | float }}"
 mode: single

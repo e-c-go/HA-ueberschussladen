@@ -122,7 +122,7 @@ action:
                     data:
                       title: "DEBUG: Zeitgesteuerte Ladung"
                       message: "Die zeitgesteuerte Ladung ist aktiv und wird nicht beeinträchtigt."
-              default:
+                default:
                 # Prüfen, ob das Überschussladen aktiv ist
                 - choose:
                     - conditions:
@@ -153,7 +153,7 @@ action:
                                     entity_id: !input.target_temperature
                                   data:
                                     value: "{{ states('!input.legionella_temperature') | float }}"
-                            default:
+                              default:
                               # Zieltemperatur auf Normaltemperatur setzen
                               - service: input_number.set_value
                                 target:

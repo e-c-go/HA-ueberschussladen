@@ -95,128 +95,40 @@ blueprint:
       selector:
         entity:
           domain: input_datetime
+    boiler_surplus_charging_switch:
+      name: Boiler Überschussladen
+      selector:
+        entity:
+          domain: switch
+    solar_generation:
+      name: Solarerzeugung in W
+      selector:
+        entity:
+          domain: sensor
 
 trigger:
   - platform: time_pattern
     seconds: "/30"
 
-condition: []
+condition:
+  - condition: state
+    entity_id: !input.boiler_surplus_charging_switch
+    state: "on"
+  - condition: state
+    entity_id: !input.boiler_time_controlled_charging_active
+    state: "off"
+  - condition: state
+    entity_id: !input.boiler_surplus_charging_active
+    state: "off"
 
 action:
-  - choose:
-      - conditions:
-          # Prüfen, ob die letzte Boilerladung gestern oder länger zurückliegt
-          - condition: template
-            value_template: >
-              {{ as_datetime(states('!input.last_boiler_charge')).date() < now().date() }}
-        sequence:
-          - choose:
-              - conditions:
-                  # Prüfen, ob die zeitgesteuerte Ladung aktiv ist
-                  - condition: state
-                    entity_id: !input.boiler_time_controlled_charging_active
-                    state: "on"
-                sequence:
-                  # Keine Aktion, wenn die zeitgesteuerte Ladung aktiv ist
-                  - service: persistent_notification.create
-                    data:
-                      title: "DEBUG: Zeitgesteuerte Ladung"
-                      message: "Die zeitgesteuerte Ladung ist aktiv und wird nicht beeinträchtigt."
-                default:
-                # Prüfen, ob das Überschussladen aktiv ist
-                - choose:
-                    - conditions:
-                        - condition: state
-                          entity_id: !input.boiler_surplus_charging_active
-                          state: "off"
-                      sequence:
-                        # Überschussladen starten
-                        - service: input_boolean.turn_on
-                          target:
-                            entity_id: !input.boiler_surplus_charging_active
-                        - choose:
-                            - conditions:
-                                # Prüfen, ob die letzte Legionellenladung länger als die Periodizität zurückliegt
-                                - condition: template
-                                  value_template: >
-                                    {% set letztes_datum = states('!input.last_legionella_run') %}
-                                    {% set periodizitat = states('!input.legionella_period') | float(0) %}
-                                    {% if letztes_datum not in ['unknown', 'none', 'unavailable'] and periodizitat > 0 %}
-                                      {{ (now().date() - as_datetime(letztes_datum).date()).days > periodizitat }}
-                                    {% else %}
-                                      false
-                                    {% endif %}
-                              sequence:
-                                # Zieltemperatur auf Legionellentemperatur setzen
-                                - service: input_number.set_value
-                                  target:
-                                    entity_id: !input.target_temperature
-                                  data:
-                                    value: "{{ states('!input.legionella_temperature') | float }}"
-                              default:
-                              # Zieltemperatur auf Normaltemperatur setzen
-                              - service: input_number.set_value
-                                target:
-                                  entity_id: !input.target_temperature
-                                data:
-                                  value: "{{ states('!input.normal_temperature') | float }}"
-                        # Boilerphasen entsprechend der minimalen Leistungstufe einschalten
-                        - choose:
-                            - conditions:
-                                - condition: template
-                                  value_template: >
-                                    {{ states('!input.min_stage') | int >= 3 }}
-                              sequence:
-                                - service: switch.turn_on
-                                  target:
-                                    entity_id: !input.shelly_phase_3
-                            - conditions:
-                                - condition: template
-                                  value_template: >
-                                    {{ states('!input.min_stage') | int >= 2 }}
-                              sequence:
-                                - service: switch.turn_on
-                                  target:
-                                    entity_id: !input.shelly_phase_2
-                            - conditions:
-                                - condition: template
-                                  value_template: >
-                                    {{ states('!input.min_stage') | int >= 1 }}
-                              sequence:
-                                - service: switch.turn_on
-                                  target:
-                                    entity_id: !input.shelly_phase_1
-                        # Warten, bis die Zieltemperatur erreicht ist
-                        - wait_template: >
-                            {{ states('!input.current_boiler_temperature') | float >= states('!input.target_temperature') | float }}
-                        # Boilerphasen ausschalten
-                        - service: switch.turn_off
-                          target:
-                            entity_id:
-                              - !input.shelly_phase_1
-                              - !input.shelly_phase_2
-                              - !input.shelly_phase_3
-                        # Überschussladen deaktivieren
-                        - service: input_boolean.turn_off
-                          target:
-                            entity_id: !input.boiler_surplus_charging_active
-                        # Datum der letzten Boilerladung setzen
-                        - service: input_datetime.set_datetime
-                          target:
-                            entity_id: !input.last_boiler_charge
-                          data:
-                            datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
-                        # Falls es eine Legionellenladung war, auch dieses Datum setzen
-                        - choose:
-                            - conditions:
-                                - condition: template
-                                  value_template: >
-                                    {{ states('!input.target_temperature') | float == states('!input.legionella_temperature') | float }}
-                              sequence:
-                                - service: input_datetime.set_datetime
-                                  target:
-                                    entity_id: !input.last_legionella_run
-                                  data:
-                                    datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+  - service: persistent_notification.create
+    data:
+      title: "DEBUG: Verfügbare Leistung"
+      message: >
+        Verfügbare Leistung: {{
+          (states('!input.solar_generation') | float * 
+          (states('!input.min_solar_share') | float / 100)) | round(2)
+        }} W
 
 mode: single

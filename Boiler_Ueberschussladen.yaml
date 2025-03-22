@@ -143,6 +143,12 @@ condition:
 action:
   - service: persistent_notification.create
     data:
+      title: "DEBUG: Einzelwerte"
+      message: >
+        Solarerzeugung: {{ states('!input.solar_generation') | float(0) }} W
+        Minimaler Solaranteil: {{ states('!input.min_solar_share') | float(0) }} %
+  - service: persistent_notification.create
+    data:
       title: "DEBUG: Verfügbare Leistung"
       message: >
         Verfügbare Leistung: {{

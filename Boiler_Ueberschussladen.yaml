@@ -9,11 +9,13 @@ blueprint:
       selector:
         entity:
           domain: input_number
+      default: null
     normal_temperature:
       name: Normale Temperatur
       selector:
         entity:
           domain: input_number
+      default: null
     min_temperature:
       name: Minimale Temperatur
       selector:
@@ -25,86 +27,103 @@ blueprint:
       selector:
         entity:
           domain: switch
+      default: null
     shelly_phase_2:
       name: Shelly Phase 2
       selector:
         entity:
           domain: switch
+      default: null
     shelly_phase_3:
       name: Shelly Phase 3
       selector:
         entity:
           domain: switch
+      default: null
     current_boiler_temperature:
       name: Aktuelle Boilertemperatur
       selector:
         entity:
           domain: sensor
+      default: null
     power_per_stage:
       name: Leistung je Stufe
       selector:
         entity:
           domain: input_number
+      default: null
     min_stage:
       name: Minimale Stufe
       selector:
         entity:
           domain: input_number
+      default: null
     last_boiler_charge:
       name: Letzte Boilerladung
       selector:
         entity:
           domain: input_datetime
+      default: null
     min_battery_charge:
       name: Minimaler Batterieladestand
       selector:
         entity:
           domain: input_number
+      default: null
     current_battery_soc:
       name: Aktueller SoC der Batterie
       selector:
         entity:
           domain: sensor
+      default: null
     battery_charge_discharge_power:
       name: Lade-Entladeleistung der Batterie
       selector:
         entity:
           domain: sensor
+      default: null
     grid_feed_in_power:
       name: Netzeinspeisung in W
       selector:
         entity:
           domain: sensor
+      default: null
     boiler_surplus_charging_active:
       name: Boiler Überschussladen aktiv
       selector:
         entity:
           domain: input_boolean
+      default: null
     min_solar_share:
       name: Minimaler Solaranteil in %
       selector:
         entity:
           domain: input_number
+      default: null
     boiler_time_controlled_charging_active:
       name: Boilerladung zeigesteuert aktiv
       selector:
         entity:
           domain: input_boolean
+      default: null
     last_legionella_run:
       name: Letzte Legionellenladung
       selector:
         entity:
           domain: input_datetime
+      default: null
     boiler_surplus_charging_switch:
       name: Boiler Überschussladen
       selector:
         entity:
           domain: input_boolean
+      default: null
     solar_generation:
       name: Solarerzeugung in W
       selector:
         entity:
           domain: sensor
+      default: null
 
 trigger:
   - platform: time_pattern

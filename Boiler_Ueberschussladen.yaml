@@ -143,8 +143,8 @@ condition:
 action:
   - service: persistent_notification.create
     data:
-      title: "DEBUG: Solarerzeugung"
+      title: "Solar- & Ladeleistungsberechnung"
       message: >
-        Solarerzeugung: "{{ states(!input.solar_generation) | float(0) }} W"
+        **Solar Power:** {{ states(!input.solar_generation) }} → {{ states(!input.solar_generation) | float(0) }} W
 
 mode: single

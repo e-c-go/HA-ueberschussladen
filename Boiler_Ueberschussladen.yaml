@@ -112,13 +112,13 @@ trigger:
 
 condition:
   - condition: state
-    entity_id: !input.boiler_surplus_charging_switch
+    entity_id: "{{ input.boiler_surplus_charging_switch }}"
     state: "on"
   - condition: state
-    entity_id: !input.boiler_time_controlled_charging_active
+    entity_id: "{{ input.boiler_time_controlled_charging_active }}"
     state: "off"
   - condition: state
-    entity_id: !input.boiler_surplus_charging_active
+    entity_id: "{{ input.boiler_surplus_charging_active }}"
     state: "off"
 
 action:
@@ -127,8 +127,8 @@ action:
       title: "DEBUG: Verfügbare Leistung"
       message: >
         Verfügbare Leistung: {{
-          (states('!input.solar_generation') | float * 
-          (states('!input.min_solar_share') | float / 100)) | round(2)
+          (states('{{ input.solar_generation }}') | float * 
+          (states('{{ input.min_solar_share }}') | float / 100)) | round(2)
         }} W
 
 mode: single

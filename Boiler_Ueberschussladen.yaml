@@ -129,6 +129,12 @@ blueprint:
 variables:
   solar_sensor: !input solar_generation
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
+  available_power: >-
+    {{
+      (states(solar_sensor) | float(0) * 
+      (states('!input.min_solar_share') | float(0) / 100)) + 
+      states(solar_sensor) | float(0)
+    }}
 
 trigger:
   - platform: time_pattern
@@ -150,6 +156,7 @@ action:
     data:
       title: "Solar- & Ladeleistungsberechnung"
       message: >
-        **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W
+        **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
+        **Available Power for Boiler:** {{ available_power }} W
 
 mode: single

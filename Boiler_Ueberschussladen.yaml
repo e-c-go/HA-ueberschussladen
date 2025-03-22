@@ -129,7 +129,7 @@ blueprint:
 variables:
   solar_sensor: !input solar_generation
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
-  solar_share: "{{ states(!input.min_solar_share) | float(0) }}"  # Solaranteil in %
+  solar_share: "{{ states(solar_sensor) | float(0) * (states('input_number.' + (!input.min_solar_share)) | float(0) / 100) }}"  # Solaranteil in %
   available_power: >-
     {{
       (states(solar_sensor) | float(0) * 

@@ -145,6 +145,6 @@ action:
     data:
       title: "DEBUG: Solarerzeugung"
       message: >
-        Solarerzeugung: {{ states(!input.solar_generation) | float(0) }} W
+        Solarerzeugung: "{{ states(!input.solar_generation) | float(0) }} W"
 
 mode: single

@@ -129,10 +129,10 @@ blueprint:
 variables:
   solar_sensor: !input solar_generation
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
-  solar_share: "{{ states(solar_sensor) | float(0) * states('input_number.min_solar_share') | float(0) }}"  # Solaranteil
+  solar_share: "{{ states('!input.min_solar_share') | float(0) }}"  # Solaranteil
   available_power: >-
     {{
-      (states(solar_sensor) | float(0) * solar_share) + 
+      (states(solar_sensor) | float(0) * solar_share / 100) + 
       states(solar_sensor) | float(0)
     }}
 
@@ -157,7 +157,7 @@ action:
       title: "Solar- & Ladeleistungsberechnung"
       message: >
         **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
-        **Solar Share:** {{ solar_share }}  
+        **Solar Share:** {{ solar_share }} %  
         **Available Power for Boiler:** {{ available_power }} W
 
 mode: single

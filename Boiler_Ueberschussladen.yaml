@@ -93,19 +93,19 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
-      default: null
+      default: input_boolean.default_boiler_surplus_charging_active
     min_solar_share:
       name: Minimaler Solaranteil in %
       selector:
         entity:
           domain: input_number
-      default: null
+      default: input_number.default_min_solar_share
     boiler_time_controlled_charging_active:
       name: Boilerladung zeigesteuert aktiv
       selector:
         entity:
           domain: input_boolean
-      default: null
+      default: input_boolean.default_boiler_time_controlled_charging_active
     last_legionella_run:
       name: Letzte Legionellenladung
       selector:
@@ -117,13 +117,13 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
-      default: null
+      default: input_boolean.default_boiler_surplus_charging_switch
     solar_generation:
       name: Solarerzeugung in W
       selector:
         entity:
           domain: sensor
-      default: null
+      default: sensor.default_solar_generation
 
 trigger:
   - platform: time_pattern
@@ -146,7 +146,7 @@ action:
       title: "DEBUG: Verfügbare Leistung"
       message: >
         Verfügbare Leistung: {{
-          (states('!input.solar_generation') | float(0) / 
+          (states('!input.solar_generation') | float(0) * 
           (states('!input.min_solar_share') | float(0) / 100)) | round(2)
         }} W
 

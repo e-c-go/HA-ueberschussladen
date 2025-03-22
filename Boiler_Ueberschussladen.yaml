@@ -124,6 +124,16 @@ blueprint:
         entity:
           domain: sensor
       default: sensor.default_solar_generation
+    solar_power:
+      name: Solarerzeugung
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+
+variables:
+  solar_sensor: !input solar_power
+  solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
 
 trigger:
   - platform: time_pattern
@@ -145,6 +155,6 @@ action:
     data:
       title: "Solar- & Ladeleistungsberechnung"
       message: >
-        **Solar Power:** {{ states(!input.solar_generation) }} → {{ states(!input.solar_generation) | float(0) }} W
+        **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W
 
 mode: single

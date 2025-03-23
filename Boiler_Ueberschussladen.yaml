@@ -128,7 +128,7 @@ blueprint:
 
 variables:
   solar_sensor: !input solar_generation
-  solar_share: !input min_solar_share
+  solar_share: "{{ states(solar_share) | float(0) }}"  # Solaranteil als Float
   current_battery_soc: !input current_battery_soc
   min_battery_charge: !input min_battery_charge
 
@@ -186,6 +186,6 @@ action:
                 **Available Power for Boiler:** "{{ available_power }} W"  
                 **Battery SoC:** "{{ battery_soc }} %"  
                 **Minimum Battery SoC:** "{{ min_battery_soc }} %"
-                **Soalaranteil:** "{{ solar_share }} %"
+                **Solaranteil:** "{{ solar_share }} %"
 
 mode: single

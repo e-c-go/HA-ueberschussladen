@@ -129,7 +129,7 @@ blueprint:
 variables:
   solar_sensor: !input solar_generation
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"  # Umrechnung kW → W
-  solar_share: "{{ states('!input.min_solar_share') | float(0) }}"  # Solaranteil
+  solar_share: "{{ states('input_number.' ~ (!input.min_solar_share)) | float(0) }}"  # Solaranteil
   available_power: >-
     {{
       (states(solar_sensor) | float(0) * solar_share) + 
@@ -154,7 +154,7 @@ condition:
         state: "off"
       - condition: template
         value_template: >
-          {{ states(!input.current_battery_soc) | float(0) > states(!input.min_battery_charge) | float(0) }}
+          {{ states(states('!input.current_battery_soc')) | float(0) > states(states('!input.min_battery_charge')) | float(0) }}
 
 action:
   - choose:
@@ -170,7 +170,7 @@ action:
             state: "off"
           - condition: template
             value_template: >
-              {{ states(!input.current_battery_soc) | float(0) > states(!input.min_battery_charge) | float(0) }}
+              {{ states(states('!input.current_battery_soc')) | float(0) > states(states('!input.min_battery_charge')) | float(0) }}
         sequence:
           - service: persistent_notification.create
             data:

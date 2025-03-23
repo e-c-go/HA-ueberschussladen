@@ -139,12 +139,12 @@ variables:
   required_power: "{{ min_power_per_stage_value * min_stage_value }}"
 
   available_power: >-
+    {% set grid = states(grid_feed_in_power) | float(0) %}
+    {% set batt = states(battery_charge_discharge_power) | float(0) %}
     {{
-      max(0,
-        (states(grid_feed_in_power) | float(0)) +
-        max(0, 0 - (states(battery_charge_discharge_power) | float(0)))
-      )
+      max(0, grid + max(0, 0 - batt))
     }}
+
 
   battery_soc: "{{ states(current_battery_soc) | float(0) }}"
   min_battery_soc: "{{ states(min_battery_charge) | float(0) }}"

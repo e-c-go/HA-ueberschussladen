@@ -170,9 +170,9 @@ action:
             data:
               title: "Solar- & Ladeleistungsberechnung"
               message: >
-                **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
-                **Available Power for Boiler:** {{ available_power }} W  
-                **Battery SoC:** {{ states(!input.current_battery_soc) | float(0) }} %  
-                **Minimum Battery SoC:** {{ states(!input.min_battery_charge) | float(0) }} %
+                **Solar Power:** "{{ solar_sensor }}" → "{{ solar_value }} W"  
+                **Available Power for Boiler:** "{{ available_power }} W"  
+                **Battery SoC:** "{{ states(!input.current_battery_soc) | float(0) }} %"  
+                **Minimum Battery SoC:** "{{ states(!input.min_battery_charge) | float(0) }} %"
 
 mode: single

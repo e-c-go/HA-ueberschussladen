@@ -128,7 +128,7 @@ blueprint:
 
 variables:
   solar_sensor: !input solar_generation
-  solar_share: "{{ states(!input.min_solar_share) | float(0) }}"  # Solaranteil als Float
+  solar_share: "{{ states('input_number.' + (!input.min_solar_share)) | float(0) }}"  # Solaranteil als Float
   current_battery_soc: !input current_battery_soc
   min_battery_charge: !input min_battery_charge
 

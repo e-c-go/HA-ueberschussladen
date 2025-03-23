@@ -128,11 +128,12 @@ blueprint:
 
 variables:
   solar_sensor: !input solar_generation
+  solar_share: !input min_solar_share
   current_battery_soc: !input current_battery_soc
   min_battery_charge: !input min_battery_charge
 
   solar_value: "{{ states(solar_sensor) | float(0) * 1000 }}"
-  solar_share: "{{ states(!input min_solar_share) | float(0) }}"
+  
   available_power: >-
     {{
       (states(solar_sensor) | float(0) * (solar_share)) +

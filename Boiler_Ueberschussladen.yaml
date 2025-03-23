@@ -154,12 +154,24 @@ condition:
         state: "off"
 
 action:
-  - service: persistent_notification.create
-    data:
-      title: "Solar- & Ladeleistungsberechnung"
-      message: >
-        **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
-        **Solar Share:** {{ solar_share }} %  
-        **Available Power for Boiler:** {{ available_power }} W
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: !input boiler_surplus_charging_switch
+            state: "on"
+          - condition: state
+            entity_id: !input boiler_time_controlled_charging_active
+            state: "off"
+          - condition: state
+            entity_id: !input boiler_surplus_charging_active
+            state: "off"
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "Solar- & Ladeleistungsberechnung"
+              message: >
+                **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
+                **Solar Share:** {{ solar_share }} %  
+                **Available Power for Boiler:** {{ available_power }} W
 
 mode: single

@@ -178,9 +178,9 @@ action:
           - condition: template
             value_template: >
               {{ battery_soc > min_battery_soc }}
-          - condition: template
-            value_template: >
-              {{ available_power > required_power }}
+          #- condition: template
+          #  value_template: >
+          #    {{ available_power > required_power }}
 
         sequence:
           - service: persistent_notification.create

@@ -135,6 +135,8 @@ variables:
       (states(solar_sensor) | float(0) * (solar_share / 100)) + 
       states(solar_sensor) | float(0)
     }}
+  battery_soc: "{{ states(!input.current_battery_soc) | float(0) }}"  # Aktueller SoC der Batterie
+  min_battery_soc: "{{ states(!input.min_battery_charge) | float(0) }}"  # Minimaler SoC der Batterie
 
 trigger:
   - platform: time_pattern
@@ -172,7 +174,7 @@ action:
               message: >
                 **Solar Power:** "{{ solar_sensor }}" → "{{ solar_value }} W"  
                 **Available Power for Boiler:** "{{ available_power }} W"  
-                **Battery SoC:** "{{ states(!input.current_battery_soc) | float(0) }} %"  
-                **Minimum Battery SoC:** "{{ states(!input.min_battery_charge) | float(0) }} %"
+                **Battery SoC:** "{{ battery_soc }} %"  
+                **Minimum Battery SoC:** "{{ min_battery_soc }} %"
 
 mode: single

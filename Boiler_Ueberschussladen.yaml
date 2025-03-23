@@ -185,5 +185,6 @@ action:
                 **Available Power for Boiler:** "{{ available_power }} W"  
                 **Battery SoC:** "{{ battery_soc }} %"  
                 **Minimum Battery SoC:** "{{ min_battery_soc }} %"
+                **Soalaranteil:** "{{ solar_share }} %"
 
 mode: single

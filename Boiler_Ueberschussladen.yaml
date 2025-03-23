@@ -141,7 +141,6 @@ variables:
   battery_soc: "{{ states(current_battery_soc) | float(0) }}"
   min_battery_soc: "{{ states(min_battery_charge) | float(0) }}"
 
-
 trigger:
   - platform: time_pattern
     seconds: "/30"
@@ -158,6 +157,9 @@ condition:
       - condition: state
         entity_id: !input boiler_surplus_charging_active
         state: "off"
+      - condition: template
+        value_template: >
+          {{ states(current_battery_soc) | float(0) > states(min_battery_charge) | float(0) }}
 
 action:
   - choose:
@@ -171,6 +173,9 @@ action:
           - condition: state
             entity_id: !input boiler_surplus_charging_active
             state: "off"
+          - condition: template
+            value_template: >
+              {{ states(current_battery_soc) | float(0) > states(min_battery_charge) | float(0) }}
         sequence:
           - service: persistent_notification.create
             data:

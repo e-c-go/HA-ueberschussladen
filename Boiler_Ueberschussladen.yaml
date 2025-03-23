@@ -93,7 +93,7 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
-      default: input_boolean.default_boiler_surplus_charging_active
+      default: input_boolean.boiler_surplus_charging_active
     min_solar_share:
       name: Minimaler Solaranteil in %
       selector:
@@ -105,7 +105,7 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
-      default: input_boolean.default_boiler_time_controlled_charging_active
+      default: input_boolean.boiler_time_controlled_charging_active
     last_legionella_run:
       name: Letzte Legionellenladung
       selector:
@@ -117,7 +117,7 @@ blueprint:
       selector:
         entity:
           domain: input_boolean
-      default: input_boolean.default_boiler_surplus_charging_switch
+      default: input_boolean.boiler_surplus_charging_switch
     solar_generation:
       name: Solarerzeugung in W
       selector:

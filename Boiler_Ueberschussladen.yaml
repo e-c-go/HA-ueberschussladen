@@ -152,9 +152,6 @@ condition:
       - condition: state
         entity_id: !input boiler_surplus_charging_active
         state: "off"
-      - condition: template
-        value_template: >
-          {{ states(!input.current_battery_soc) | float(0) > states(!input.min_battery_charge) | float(0) }}
 
 action:
   - choose:
@@ -168,16 +165,12 @@ action:
           - condition: state
             entity_id: !input boiler_surplus_charging_active
             state: "off"
-          - condition: template
-            value_template: >
-              {{ states(!input.current_battery_soc) | float(0) > states(!input.min_battery_charge) | float(0) }}
         sequence:
           - service: persistent_notification.create
             data:
               title: "Solar- & Ladeleistungsberechnung"
               message: >
                 **Solar Power:** {{ solar_sensor }} → {{ solar_value }} W  
-                **Solar Share:** {{ solar_share }} %  
                 **Available Power for Boiler:** {{ available_power }} W
 
 mode: single

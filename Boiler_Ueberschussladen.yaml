@@ -141,7 +141,7 @@ variables:
   # Verrechnung OHNE states() auf Variablen
   available_power: >-
     {{
-      (solar_value * (solar_share | float(0))) +
+      (solar_value * (solar_share | float(0)) / 100) +
       solar_value
     }}
 

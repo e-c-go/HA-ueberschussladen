@@ -69,13 +69,13 @@ blueprint:
       selector:
         entity:
           domain: input_number
-      default: null
+      default: input_number.default_min_battery_charge
     current_battery_soc:
       name: Aktueller SoC der Batterie
       selector:
         entity:
           domain: sensor
-      default: null
+      default: sensor.default_current_battery_soc
     battery_charge_discharge_power:
       name: Lade-Entladeleistung der Batterie
       selector:

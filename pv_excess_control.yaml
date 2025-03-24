@@ -392,13 +392,15 @@ blueprint:
         entity:
           domain: sensor
           multiple: false
-    aptec_switch:
+    zaptec_switch:
       name: "Zaptec Überschussladen Switch"
       description: >
         Wähle den Switch, der das Überschussladen aktiviert oder deaktiviert.
       selector:
         entity:
           domain: input_boolean
+          multiple: false
+      default: input_boolean.zaptec_uberschussladen
 
 
 mode: single
